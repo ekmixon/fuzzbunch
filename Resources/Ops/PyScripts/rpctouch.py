@@ -15,7 +15,7 @@ def __main__(arguments):
     type = arguments[1]
     port = arguments[2]
     ourscan = None
-    if (not (type in scans)):
+    if type not in scans:
         dsz.ui.Echo('You must enter a valid scan type', dsz.ERROR)
         printhelp(arguments)
         return 0
@@ -29,7 +29,7 @@ def __main__(arguments):
     if (not checkip(target)):
         dsz.ui.Echo('You must enter a valid IP address', dsz.ERROR)
         return 0
-    if ((type == '15') and (not ((port == '139') or (port == '445')))):
+    if type == '15' and port not in ['139', '445']:
         dsz.ui.Echo('You must use port 139 or 445 with ELV touch', dsz.ERROR)
         return 0
     redircmdid = 0
@@ -37,7 +37,7 @@ def __main__(arguments):
     while (redircmdid == 0):
         redirport = random.randint(10000, 65500)
         redircmdid = startredir(redirport, target, ourscan['port'])
-    dsz.ui.Echo(('RPCTOUCH (type %s, %s) on %s' % (type, port, target)))
+    dsz.ui.Echo(f'RPCTOUCH (type {type}, {port}) on {target}')
     if (type == '15'):
         PATH_TO_ELV = ('%s\\LegacyWindowsExploits\\Exploits\\ELV 2.1.3\\ELV.exe' % resdir)
         cmd = ('log local run -command "%s -i 127.0.0.1 -p %s -r 2 -t 1 -b %s -o 60 -rpc -h %s" -redirect scan_%s-%s-%s' % (PATH_TO_ELV, redirport, ourscan['num'], target, target, type, ourscan['protocol']))
@@ -53,22 +53,26 @@ def __main__(arguments):
     stopredir(redircmdid)
 
 def stopredir(redircmdid):
-    cmd = ('stop %s' % redircmdid)
+    cmd = f'stop {redircmdid}'
     dsz.control.echo.Off()
     (succ, cmdid) = dsz.cmd.RunEx(cmd, dsz.RUN_FLAG_RECORD)
     dsz.control.echo.On()
     if (not succ):
-        dsz.ui.Echo(('Unable to stop redirector with cmdid %s' % redircmdid), dsz.ERROR)
+        dsz.ui.Echo(f'Unable to stop redirector with cmdid {redircmdid}', dsz.ERROR)
         return False
     return True
 
 def startredir(redirport, target, port):
     dsz.control.echo.Off()
-    cmd = ('redirect -tcp -lplisten %s -target %s %s' % (redirport, target, port))
+    cmd = f'redirect -tcp -lplisten {redirport} -target {target} {port}'
     dsz.control.echo.On()
     (succ, redircmdid) = dsz.cmd.RunEx(cmd, dsz.RUN_FLAG_RECORD)
     if (not succ):
-        dsz.ui.Echo(('Failed: redirect -tcp -lplisten %s -target %s %s' % (redirport, target, port)), dsz.ERROR)
+        dsz.ui.Echo(
+            f'Failed: redirect -tcp -lplisten {redirport} -target {target} {port}',
+            dsz.ERROR,
+        )
+
         return 0
     return redircmdid
 
@@ -76,7 +80,7 @@ def printhelp(args):
     dsz.ui.Echo('Usage: rpc <IP to scan> [probeType] [portTypes]')
     dsz.ui.Echo(' probeType: \n\t1=General\n\t2=RegProbe\n\t3=XP Home/Pro\n\t4=Atsvc port req.\n\t5=W2K SP4 Atsvc\n\t7=probe for DCOM patches\n\t8=W2K3\n\t9=MGMT Probe\n\t10=EPMP Probe\n\t13=W2K3 SP0\n\t14=64-BIT\n\t15=ELV probe')
     dsz.ui.Echo(' portTypes: 135, 139, 445, 80')
-    dsz.ui.Echo((' You provided %s arguments' % len(args)))
+    dsz.ui.Echo(f' You provided {len(args)} arguments')
 
 def checkip(ipstring):
     try:

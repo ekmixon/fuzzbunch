@@ -26,7 +26,7 @@ def set(name, data=None, dbHandle=None):
             if (data != None):
                 ('UPDATE marker SET extra = :data WHERE name = :name', (data, name))
         else:
-            if (data == None):
+            if data is None:
                 data = ''
             curs.execute('INSERT INTO marker (name, last_date, extra) VALUES (:name, :now, :data)', (name, datetime.datetime.now(), data))
 
@@ -63,9 +63,9 @@ def get(name, dbHandle=None):
         curs = ensureMarkerTable(db)
         curs.execute('SELECT name, last_date, extra FROM marker WHERE name = :name', (name,))
         marker = curs.fetchone()
-        if (marker == None):
+        if marker is None:
             return {'last_date': datetime.datetime.min, 'extra': ''}
-        year = int(marker[1][0:4])
+        year = int(marker[1][:4])
         month = int(marker[1][5:7])
         day = int(marker[1][8:10])
         hour = int(marker[1][11:13])
@@ -91,7 +91,7 @@ def getAll(dbHandle=None):
         retval = {}
         curs.execute('SELECT name, last_date, extra FROM marker')
         for marker in curs:
-            year = int(marker[1][0:4])
+            year = int(marker[1][:4])
             month = int(marker[1][5:7])
             day = int(marker[1][8:10])
             hour = int(marker[1][11:13])

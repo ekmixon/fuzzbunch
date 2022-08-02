@@ -12,9 +12,7 @@ warnhookables = ['eventlogedit']
 def ensureTable(dbHandle=None):
     if (dbHandle is None):
         dbHandle = ops.db.Database(db=ops.db.TARGET_DB, isolation_level=None)
-        curs = dbHandle.connection.cursor()
-    else:
-        curs = dbHandle.connection.cursor()
+    curs = dbHandle.connection.cursor()
     try:
         curs.execute('CREATE TABLE safetyhandlers (plugin, handlerfunc)')
     except:
@@ -22,7 +20,7 @@ def ensureTable(dbHandle=None):
     return curs
 
 def cmdenv(plugin):
-    return ops.env.get(('OPS_SAFE_%s' % plugin))
+    return ops.env.get(f'OPS_SAFE_{plugin}')
 
 def getSafetyHandlerNames(plugin):
     retval = []
@@ -32,7 +30,7 @@ def getSafetyHandlerNames(plugin):
         retval = []
         for handlername in handlernames:
             lastdot = handlername.rindex('.')
-            modname = handlername[0:lastdot]
+            modname = handlername[:lastdot]
             funcname = handlername[(lastdot + 1):]
             retval.append((modname, funcname))
     return retval
@@ -45,17 +43,21 @@ def getSafetyHandlerFuncs(plugin):
             stepimport(funcname[0])
             retval.append(sys.modules[funcname[0]].__dict__[funcname[1]])
         except ImportError as ex:
-            logger.log(10, ('Could not find module %s' % funcname[0]))
+            logger.log(10, f'Could not find module {funcname[0]}')
             raise ex
         except KeyError as ex:
-            logger.log(10, ('Could not find function %s in module %s' % (funcname[1], funcname[0])))
+            logger.log(
+                10,
+                f'Could not find function {funcname[1]} in module {funcname[0]}',
+            )
+
             raise ex
     return retval
 
 def addSafetyHandler(plugin, fullfunc):
     current = getSafetyHandlerNames(plugin)
     lastdot = fullfunc.rindex('.')
-    modname = fullfunc[0:lastdot]
+    modname = fullfunc[:lastdot]
     funcname = fullfunc[(lastdot + 1):]
     splitfunc = (modname, funcname)
     if (splitfunc not in current):
@@ -68,7 +70,7 @@ def clearSafetyHandler(plugin):
 def removeSafetyHandler(plugin, fullfunc):
     current = getSafetyHandlerNames(plugin)
     lastdot = fullfunc.rindex('.')
-    modname = fullfunc[0:lastdot]
+    modname = fullfunc[:lastdot]
     funcname = fullfunc[(lastdot + 1):]
     splitfunc = (modname, funcname)
     for handler in current:
@@ -79,14 +81,14 @@ GENERIC_WRAPPER_SCRIPT = 'wrappers/safetywrapper.py'
 
 def writeSafetyHandlers(plugin, handlers):
     if ((handlers is None) or (len(handlers) == 0)):
-        ops.env.delete(('OPS_SAFE_%s' % plugin))
+        ops.env.delete(f'OPS_SAFE_{plugin}')
         ops.cmd.getDszCommand('wrappers', unregister=plugin, script=GENERIC_WRAPPER_SCRIPT, project='Ops', pre=True).execute()
         return
     else:
         strval = ('%s.%s' % handlers[0])
         for handler in handlers[1:]:
             strval += (',%s.%s' % handler)
-        ops.env.set(('OPS_SAFE_%s' % plugin), strval)
+        ops.env.set(f'OPS_SAFE_{plugin}', strval)
         if (len(handlers) == 1):
             ops.cmd.getDszCommand('wrappers', register=plugin, script=GENERIC_WRAPPER_SCRIPT, project='Ops', pre=True).execute()
         ops.warn(('%d safety %s registered for %s' % (len(handlers), ('handler' if (len(handlers) == 1) else 'handlers'), plugin)))
@@ -105,7 +107,7 @@ def saveHandlers():
     tdb.connection.execute('DELETE FROM safetyhandlers')
     env = ops.cmd.quickrun('lpgetenv')
     for var in env.envitem:
-        if (var.option[0:9] == 'OPS_SAFE_'):
+        if var.option[:9] == 'OPS_SAFE_':
             tdb.connection.execute('INSERT INTO safetyhandlers(plugin, handlerfunc) VALUES(?, ?)', (var.option[9:], var.value))
 
 def listSafetyHandlers():
@@ -116,12 +118,16 @@ def stepimport(modname):
     curpack = packs[0]
     __import__(curpack)
     for pack in packs[1:]:
-        curpack += ('.' + pack)
+        curpack += f'.{pack}'
         __import__(curpack)
 
 def doSafetyHandlers(commandobj):
     if (not isinstance(commandobj, ops.cmd.DszCommand)):
-        raise RuntimeError, ('Script did not provide an ops.cmd.DszCommand instance; instead it gave me a %s' % type(commandobj))
+        raise (
+            RuntimeError,
+            f'Script did not provide an ops.cmd.DszCommand instance; instead it gave me a {type(commandobj)}',
+        )
+
     good = True
     msgparts = []
     if (not commandobj.validateInput()):
@@ -141,7 +147,7 @@ def doSafetyHandlers(commandobj):
 
 def _usage():
     return 'Usage: \n\tsafetychecks.py <load|save|list>\n\tsafetychecks.py clear <name of plugin>\n\tsafetychecks.py <add|delete> <name of safety check>\n\n\tNote: name of safety check is not required for clear'
-if ((__name__ == '__main__') or (__name__ == '__ops_survey_plugin__')):
+if __name__ in ['__main__', '__ops_survey_plugin__']:
     good = False
     if (len(sys.argv) == 2):
         action = sys.argv[1]

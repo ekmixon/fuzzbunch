@@ -75,8 +75,7 @@ def connection_string_menu(db_module):
     database_menu.add_option('Using an existing handle', callback=int_return_callback, prompt=handle_prompt, menu=database_menu)
     while True:
         result = database_menu.execute(exit='Back...', menuloop=False)
-        handle = result['option_state']
-        if handle:
+        if handle := result['option_state']:
             return handle
         if (result['selection'] == 0):
             break

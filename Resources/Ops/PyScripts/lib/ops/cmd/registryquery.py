@@ -24,14 +24,11 @@ class RegistryQueryCommand(ops.cmd.DszCommand, ):
         if (val.lower() in HIVES):
             self.optdict['hive'] = val.lower()
         else:
-            raise OpsCommandException(('Invalid hive %s' % val))
+            raise OpsCommandException(f'Invalid hive {val}')
     hive = property(_getHive, _setHive)
 
     def _getKey(self):
-        if ('key' in self.optdict):
-            return self.optdict['key']
-        else:
-            return None
+        return self.optdict['key'] if ('key' in self.optdict) else None
 
     def _setKey(self, val):
         if ((val is None) or (val.strip() == '')):
@@ -46,10 +43,7 @@ class RegistryQueryCommand(ops.cmd.DszCommand, ):
     key = property(_getKey, _setKey)
 
     def _getValue(self):
-        if ('value' in self.optdict):
-            return self.optdict['value']
-        else:
-            return None
+        return self.optdict['value'] if ('value' in self.optdict) else None
 
     def _setValue(self, val):
         if (val is None):
@@ -64,10 +58,7 @@ class RegistryQueryCommand(ops.cmd.DszCommand, ):
     value = property(_getValue, _setValue)
 
     def _getRecursive(self):
-        if (('recursive' in self.optdict) and self.optdict['recursive']):
-            return True
-        else:
-            return False
+        return bool((('recursive' in self.optdict) and self.optdict['recursive']))
 
     def _setRecursive(self, val):
         if val:
@@ -77,10 +68,7 @@ class RegistryQueryCommand(ops.cmd.DszCommand, ):
     recursive = property(_getRecursive, _setRecursive)
 
     def _getTarget(self):
-        if ('target' in self.optdict):
-            return self.optdict['target']
-        else:
-            return None
+        return self.optdict['target'] if ('target' in self.optdict) else None
 
     def _setTarget(self, val):
         if (val is None):
@@ -91,10 +79,7 @@ class RegistryQueryCommand(ops.cmd.DszCommand, ):
     target = property(_getTarget, _setTarget)
 
     def _getWow64(self):
-        if (('wow64' in self.optdict) and self.optdict['wow64']):
-            return True
-        else:
-            return False
+        return bool((('wow64' in self.optdict) and self.optdict['wow64']))
 
     def _setWow64(self, val):
         if val:
@@ -104,10 +89,7 @@ class RegistryQueryCommand(ops.cmd.DszCommand, ):
     wow64 = property(_getWow64, _setWow64)
 
     def _getWow32(self):
-        if (('wow32' in self.optdict) and self.optdict['wow32']):
-            return True
-        else:
-            return False
+        return bool((('wow32' in self.optdict) and self.optdict['wow32']))
 
     def _setWow32(self, val):
         if val:
@@ -117,10 +99,7 @@ class RegistryQueryCommand(ops.cmd.DszCommand, ):
     wow32 = property(_getWow32, _setWow32)
 
     def _getChunksize(self):
-        if ('chunksize' in self.optdict):
-            return self.optdict['chunksize']
-        else:
-            return None
+        return self.optdict['chunksize'] if ('chunksize' in self.optdict) else None
 
     def _setChunksize(self, val):
         if (val is None):

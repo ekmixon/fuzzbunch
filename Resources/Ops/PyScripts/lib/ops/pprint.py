@@ -16,9 +16,7 @@ def pprint(data, header=None, dictorder=None, echocodes=None, align=None, print_
     if ((dict is type(data[0])) and (header is None)):
         header = dictorder
     if isinstance(data[0], ops.data.OpsObject):
-        newdata = list()
-        for item in data:
-            newdata.append(item.__dict__)
+        newdata = [item.__dict__ for item in data]
         data = newdata
         if (dictorder is None):
             raise Exception('You must specify a dictorder (set of keys) when pprinting an ops.data object')
@@ -59,7 +57,7 @@ def pprint(data, header=None, dictorder=None, echocodes=None, align=None, print_
                 if ((widths[i] - len(d[i])) % 2):
                     output += ' '
             else:
-                output += (('| ' + d[i]) + (' ' * ((widths[i] - len(d[i])) + 1)))
+                output += f'| {d[i]}' + ' ' * ((widths[i] - len(d[i])) + 1)
                 if percents[i]:
                     output += (' ' * (percents[i] - d[i].count('%')))
         output += '|'

@@ -1,14 +1,12 @@
 
 import sys, os
 from ConfigParser import SafeConfigParser
-config = dict()
+config = {}
 try:
     conf = SafeConfigParser()
     found = conf.read(['C:\\utils\\config.txt', 'D:\\DSZOpsDisk\\Resources\\Ops\\Data\\config.txt'])
     for section in conf.sections():
-        config[section] = dict()
-        for item in conf.items(section):
-            config[section][item[0]] = item[1]
+        config[section] = {item[0]: item[1] for item in conf.items(section)}
 except:
     pass
 globalpath = config['paths']['sharedpython']

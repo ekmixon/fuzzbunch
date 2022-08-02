@@ -14,8 +14,7 @@ class ProcessesCommandData(DszCommandObject, ):
         retval = []
         retval.extend(self.initialprocesslistitem.processitem)
         for startevent in self.startprocesslistitem:
-            for proc in startevent.processitem:
-                retval.append(proc)
+            retval.extend(iter(startevent.processitem))
         for endevent in self.stopprocesslistitem:
             for proc in endevent.processitem:
                 endproc = filter((lambda x: (x.id == proc.id)), retval)
@@ -55,10 +54,7 @@ class ProcessData(DszObject, ):
     proctype = property(_getFriendlyType)
 
     def _getFullBinPath(self):
-        if (self.path != ''):
-            return os.path.join(self.path, self.name)
-        else:
-            return self.name
+        return os.path.join(self.path, self.name) if (self.path != '') else self.name
     fullpath = property(_getFullBinPath)
 if ('processes' not in cmd_definitions):
     dszprocessitem = OpsClass('processitem', {'id': OpsField('id', dsz.TYPE_INT), 'parentid': OpsField('parentid', dsz.TYPE_INT), 'description': OpsField('description', dsz.TYPE_STRING), 'name': OpsField('name', dsz.TYPE_STRING), 'path': OpsField('path', dsz.TYPE_STRING), 'display': OpsField('display', dsz.TYPE_STRING), 'user': OpsField('user', dsz.TYPE_STRING), 'is64bit': OpsField('is64bit', dsz.TYPE_BOOL), 'created': OpsClass('created', {'typevalue': OpsField('typevalue', dsz.TYPE_INT), 'type': OpsField('type', dsz.TYPE_STRING), 'time': OpsField('time', dsz.TYPE_STRING), 'date': OpsField('date', dsz.TYPE_STRING)}, DszObject), 'cputime': OpsClass('cputime', {'minutes': OpsField('minutes', dsz.TYPE_INT), 'seconds': OpsField('seconds', dsz.TYPE_INT), 'hours': OpsField('hours', dsz.TYPE_INT)}, DszObject)}, ProcessData, single=False)

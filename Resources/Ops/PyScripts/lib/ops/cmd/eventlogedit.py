@@ -21,10 +21,7 @@ class EventLogEditCommand(ops.cmd.DszCommand, ):
         for opt in self.optdict:
             if (opt not in VALID_OPTIONS):
                 return False
-        for req in self.reqopts:
-            if (req not in self.optdict):
-                return False
-        return True
+        return all(req in self.optdict for req in self.reqopts)
     log = property((lambda x: getValueOption(x, 'log')), (lambda x, y: setListOption(x, y, 'log', ['system', 'application', 'security'])))
     record = property((lambda x: getValueOption(x, 'record')), (lambda x, y: setIntOption(x, y, 'record')))
     searchlen = property((lambda x: getValueOption(x, 'searchlen')), (lambda x, y: setIntOption(x, y, 'searchlen')))
@@ -48,7 +45,7 @@ def mySafetyCheck(self):
         good = False
         msgparts.append('Your command did not pass input validation')
     msg = ''
-    if (len(msgparts) > 0):
+    if msgparts:
         msg = msgparts[0]
         for msgpart in msgparts[1:]:
             msg += ('\n\t' + msgpart)

@@ -124,11 +124,15 @@ def enterprise_manager_check():
     if (not emagent_process):
         return
     emagent_process = emagent_process[0]
-    print ''
-    dsz.ui.Echo(('Oracle Enterprise Manager Agent is running! PID: %s' % emagent_process.id), dsz.WARNING)
-    print ''
+    process_list = get_processlist(minimal=False, maxage=timedelta(seconds=(60 * 60)))
+    dsz.ui.Echo(
+        f'Oracle Enterprise Manager Agent is running! PID: {emagent_process.id}',
+        dsz.WARNING,
+    )
+
+    process_list = get_processlist(minimal=False, maxage=timedelta(seconds=(60 * 60)))
     dsz.ui.Echo("Any 'sys' logins will be logged even if using PASSFREELY! You'd better know what you're doing!", dsz.WARNING)
-    print ''
+    process_list = get_processlist(minimal=False, maxage=timedelta(seconds=(60 * 60)))
     dsz.ui.Pause('')
 
 def audit_disable_with_verify():
@@ -189,13 +193,13 @@ def listener_log_check():
 def create_connection_string(driver, uid, pwd, sid, host, port):
     con_string = ('driver={%s};uid={%s};pwd={%s}' % (driver, uid, pwd))
     if (sid and host and port):
-        con_string += (';dbq=%s:%s/%s' % (host, port, sid))
-    elif (sid and host and (not port)):
-        con_string += (';dbq=%s/%s' % (host, sid))
+        con_string += f';dbq={host}:{port}/{sid}'
+    elif sid and host:
+        con_string += f';dbq={host}/{sid}'
     elif ((not sid) and host and port):
-        con_string += (';dbq=%s:%s' % (host, port))
-    elif (sid and (not host) and (not port)):
-        con_string += (';dbq=%s' % sid)
-    elif ((not sid) and host and (not port)):
-        con_string += (';dbq=%s' % host)
+        con_string += f';dbq={host}:{port}'
+    elif sid and not port:
+        con_string += f';dbq={sid}'
+    elif not sid and host:
+        con_string += f';dbq={host}'
     return con_string

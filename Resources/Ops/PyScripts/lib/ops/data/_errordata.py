@@ -20,7 +20,7 @@ class DszCommandError(list, ):
         msg = ('Error running command %d: %s\n' % (self.__cmdid, dsz.cmd.data.Get('commandmetadata::fullcommand', dsz.TYPE_STRING, cmdId=self.__cmdid)[0]))
         if len(self):
             for i in self:
-                msg += (' - %s' % i)
+                msg += f' - {i}'
         else:
             msg += ' - No additional information available. Try viewing the logs.'
         return msg
@@ -33,7 +33,7 @@ class DszCommandErrorData(object, ):
         self.timestamp = timestamp
 
     def __str__(self):
-        return ('%s: %s' % (self.type, self.text))
+        return f'{self.type}: {self.text}'
 
 def getLastError():
     return getErrorFromCommandId(cmdid=dsz.cmd.LastId())
@@ -52,17 +52,17 @@ def getErrorFromCommandId(cmdid):
                 files.append(fullpath)
         except ValueError:
             pass
-    errorSets = []
-    for file in files:
-        errorSets.append(_parseXML(file, cmdid))
-    return errorSets
+    return [_parseXML(file, cmdid) for file in files]
 
 def _parseXML(fullpath, cmdid):
     xsltoutput = subprocess.Popen(['javaw', '-jar', XALAN, '-in', fullpath, '-xsl', STYLESHEET], stdout=subprocess.PIPE).communicate()[0]
     tree = xml.etree.ElementTree.fromstring(xsltoutput)
     if (not tree.get('timestamp')):
         return DszCommandError(timestamp='', data=[], cmdid=cmdid)
-    timestamp = datetime.datetime(*time.strptime(tree.get('timestamp'), '%Y-%m-%dT%H:%M:%S')[0:6])
+    timestamp = datetime.datetime(
+        *time.strptime(tree.get('timestamp'), '%Y-%m-%dT%H:%M:%S')[:6]
+    )
+
     errors = DszCommandError(timestamp=timestamp, cmdid=cmdid)
     for error in tree:
         errors.append(DszCommandErrorData(type=error.get('type'), text=unicode(error.text, 'utf_8'), timestamp=timestamp))

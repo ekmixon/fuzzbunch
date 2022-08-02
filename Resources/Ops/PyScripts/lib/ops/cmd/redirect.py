@@ -45,10 +45,13 @@ class RedirectCommand(ops.cmd.DszCommand, ):
             else:
                 self.implantlisten = implantlisten
         self.target = target
-        delmark = []
-        for key in optdict:
-            if ((not (key in VALID_OPTIONS)) or (key in ['lplisten', 'implantlisten', 'target'])):
-                delmark.append(key)
+        delmark = [
+            key
+            for key in optdict
+            if key not in VALID_OPTIONS
+            or key in ['lplisten', 'implantlisten', 'target']
+        ]
+
         for deler in delmark:
             del optdict[deler]
         ops.cmd.DszCommand.__init__(self, plugin=plugin, **optdict)
@@ -64,31 +67,29 @@ class RedirectCommand(ops.cmd.DszCommand, ):
             return False
         if (self.protocol is None):
             return False
-        for port in [self.source_port, self.client_port]:
-            if ((port < (-1)) or (port > 65535)):
-                return False
-        return True
+        return not any(
+            ((port < (-1)) or (port > 65535))
+            for port in [self.source_port, self.client_port]
+        )
 
     def __str__(self):
-        cmdstr = ''
-        for prefix in self.prefixes:
-            cmdstr += ('%s ' % prefix)
-        cmdstr += ('%s -%s -target %s' % (self.plugin, self.protocol, self.target))
+        cmdstr = ''.join(f'{prefix} ' for prefix in self.prefixes)
+        cmdstr += f'{self.plugin} -{self.protocol} -target {self.target}'
         if (self.lplisten is not None):
-            cmdstr += (' -lplisten %s' % self.lplisten)
-        elif (self.implantlisten is not None):
-            cmdstr += (' -implantlisten %s' % self.implantlisten)
+            cmdstr += f' -lplisten {self.lplisten}'
+        elif self.implantlisten is not None:
+            cmdstr += f' -implantlisten {self.implantlisten}'
         if self.port_sharing:
-            cmdstr += (' -portsharing %s' % self.port_sharing)
+            cmdstr += f' -portsharing {self.port_sharing}'
         if self.limit_connections:
-            cmdstr += (' -limitconnections %s' % self.limit_connections)
+            cmdstr += f' -limitconnections {self.limit_connections}'
         for optkey in self.optdict:
             if (optkey in ['tcp', 'udp']):
                 continue
             if (self.optdict[optkey] == True):
-                cmdstr += (' -%s' % optkey)
+                cmdstr += f' -{optkey}'
             else:
-                cmdstr += (' -%s %s' % (optkey, self.optdict[optkey]))
+                cmdstr += f' -{optkey} {self.optdict[optkey]}'
         if self.dszquiet:
             x = dsz.control.Method()
             dsz.control.echo.Off()
@@ -112,10 +113,7 @@ class RedirectCommand(ops.cmd.DszCommand, ):
     protocol = property(_getProtocol, _setProtocol)
 
     def _getTCP(self):
-        if (('tcp' in self.optdict) and self.optdict['tcp']):
-            return True
-        else:
-            return False
+        return bool((('tcp' in self.optdict) and self.optdict['tcp']))
 
     def _setTCP(self, val):
         if (((val is None) or (val is False)) and ('tcp' in self.optdict)):
@@ -127,10 +125,7 @@ class RedirectCommand(ops.cmd.DszCommand, ):
     tcp = property(_getTCP, _setTCP)
 
     def _getUDP(self):
-        if (('udp' in self.optdict) and self.optdict['udp']):
-            return True
-        else:
-            return False
+        return bool((('udp' in self.optdict) and self.optdict['udp']))
 
     def _setUDP(self, val):
         if (((val is None) or (val is False)) and ('udp' in self.optdict)):
@@ -145,7 +140,7 @@ class RedirectCommand(ops.cmd.DszCommand, ):
         return self._direction
 
     def _setDirection(self, val):
-        if (not (val in [IMPLANTLISTEN, LPLISTEN])):
+        if val not in [IMPLANTLISTEN, LPLISTEN]:
             raise OpsCommandException('redirect command: direction must be one of lplisten or implantlisten')
         self._direction = val
     direction = property(_getDirection, _setDirection)
@@ -171,13 +166,12 @@ class RedirectCommand(ops.cmd.DszCommand, ):
     bind_address = property(_getBindAddr, _setBindAddr)
 
     def _getLplisten(self):
-        if (self.direction == LPLISTEN):
-            retval = str(self.listen_port)
-            if (self.bind_address != '0.0.0.0'):
-                retval += (' %s' % self.bind_address)
-            return retval
-        else:
+        if self.direction != LPLISTEN:
             return None
+        retval = str(self.listen_port)
+        if (self.bind_address != '0.0.0.0'):
+            retval += f' {self.bind_address}'
+        return retval
 
     def _setLplisten(self, value):
         if (value is None):
@@ -194,13 +188,12 @@ class RedirectCommand(ops.cmd.DszCommand, ):
     lplisten = property(_getLplisten, _setLplisten)
 
     def _getImplantlisten(self):
-        if (self.direction == IMPLANTLISTEN):
-            retval = str(self.listen_port)
-            if (self.bind_address != '0.0.0.0'):
-                retval += (' %s' % self.bind_address)
-            return retval
-        else:
+        if self.direction != IMPLANTLISTEN:
             return None
+        retval = str(self.listen_port)
+        if (self.bind_address != '0.0.0.0'):
+            retval += f' {self.bind_address}'
+        return retval
 
     def _setImplantlisten(self, value):
         if (value is None):
@@ -246,7 +239,7 @@ class RedirectCommand(ops.cmd.DszCommand, ):
         if util.ip.validate(value):
             self._sourceAddr = value
         else:
-            raise OpsCommandException(('Invalid source IP address %s' % value))
+            raise OpsCommandException(f'Invalid source IP address {value}')
     source_address = property(_getSourceAddr, _setSourceAddr)
 
     def _getSourcePort(self):
@@ -265,7 +258,7 @@ class RedirectCommand(ops.cmd.DszCommand, ):
     def _getTarget(self):
         retval = ('%s %d' % (self.target_address, self.target_port))
         if (self.source_address != '0.0.0.0'):
-            retval += (' %s' % self.source_address)
+            retval += f' {self.source_address}'
             if (self.source_port != (-1)):
                 retval += (' %d' % self.source_port)
         return retval
@@ -296,7 +289,7 @@ class RedirectCommand(ops.cmd.DszCommand, ):
         elif util.ip.validate(value):
             self._clientAddr = value
         else:
-            raise OpsCommandException(('Invalid client IP address %s' % value))
+            raise OpsCommandException(f'Invalid client IP address {value}')
     client_address = property(_getClientAddr, _setClientAddr)
 
     def _getClientPort(self):
@@ -340,7 +333,7 @@ class RedirectCommand(ops.cmd.DszCommand, ):
         elif util.ip.validate(value):
             self._limitAddr = value
         else:
-            raise OpsCommandException(('Invalid limit IP address %s' % value))
+            raise OpsCommandException(f'Invalid limit IP address {value}')
     limit_address = property(_getLimitAddr, _setLimitAddr)
 
     def _getLimitMask(self):
@@ -351,12 +344,12 @@ class RedirectCommand(ops.cmd.DszCommand, ):
         if util.ip.validate(value):
             self._limitMask = value
         else:
-            raise OpsCommandException(('Invalid limit mask %s' % value))
+            raise OpsCommandException(f'Invalid limit mask {value}')
     limit_mask = property(_getLimitMask, _setLimitMask)
 
     def _getLimitConnections(self):
         if (self.limit_address != '0.0.0.0'):
-            return ('%s %s' % (self.limit_address, self.limit_mask))
+            return f'{self.limit_address} {self.limit_mask}'
         else:
             return None
 
@@ -373,10 +366,7 @@ class RedirectCommand(ops.cmd.DszCommand, ):
     limit_connections = property(_getLimitConnections, _setLimitConnections)
 
     def _getConnections(self):
-        if ('connections' in self.optdict):
-            return self.optdict['connections']
-        else:
-            return 0
+        return self.optdict['connections'] if ('connections' in self.optdict) else 0
 
     def _setConnections(self, value):
         if (value is not None):
@@ -390,10 +380,7 @@ class RedirectCommand(ops.cmd.DszCommand, ):
     connections = property(_getConnections, _setConnections)
 
     def _getPacketsize(self):
-        if ('packetsize' in self.optdict):
-            return self.optdict['packetsize']
-        else:
-            return 0
+        return self.optdict['packetsize'] if ('packetsize' in self.optdict) else 0
 
     def _setPacketsize(self, value):
         if (value is not None):
@@ -407,10 +394,7 @@ class RedirectCommand(ops.cmd.DszCommand, ):
     packetsize = property(_getPacketsize, _setPacketsize)
 
     def _getRedirNotify(self):
-        if (('sendnotify' in self.optdict) and self.optdict['sendnotify']):
-            return True
-        else:
-            return False
+        return bool((('sendnotify' in self.optdict) and self.optdict['sendnotify']))
 
     def _setRedirNotify(self, val):
         if (((val is None) or (val is False)) and ('sendnotify' in self.optdict)):

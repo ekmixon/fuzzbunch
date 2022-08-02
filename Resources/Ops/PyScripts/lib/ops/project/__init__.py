@@ -28,10 +28,10 @@ def getAllProjectNames():
     return retval
 
 def getAllProjectLogdirs():
-    retval = []
-    for projdir in getAllProjectNames():
-        retval.append(os.path.join(ops.BASELOGDIR, projdir))
-    return retval
+    return [
+        os.path.join(ops.BASELOGDIR, projdir)
+        for projdir in getAllProjectNames()
+    ]
 
 def getAllProjectDBs():
     retval = []
@@ -47,17 +47,13 @@ def getAllTargets(project=''):
     if (ALL_TARGETS == []):
         retval = []
         projlist = None
-        if (project == ''):
-            projlist = getAllProjectNames()
-        else:
-            projlist = [project]
+        projlist = getAllProjectNames() if (project == '') else [project]
         retval = []
         for proj in projlist:
             proj_obj = Project(proj)
             with get_pdb(proj) as pdb:
                 curs = pdb.execute('SELECT * FROM targets')
-                for row in curs:
-                    retval.append(Target(proj_obj, dbrow=row))
+                retval.extend(Target(proj_obj, dbrow=row) for row in curs)
         ALL_TARGETS = retval
     return ALL_TARGETS
 
@@ -78,16 +74,27 @@ def matchTarget(**evidence):
             candidates.append({'target': targ})
         elif ((targ.hostname == evidence['hostname']) and (targ.hostname != '') and (evidence['hostname'] is not None)):
             candidates.append({'target': targ})
-        elif (evidence['macs'] is not None):
-            for mac in targ.macs:
-                if (mac.lower() in evidence['macs']):
-                    candidates.append({'target': targ})
+        elif evidence['macs'] is not None:
+            candidates.extend(
+                {'target': targ}
+                for mac in targ.macs
+                if (mac.lower() in evidence['macs'])
+            )
+
     max_confidence = (len(evidence) + len(evidence['macs']))
     for cand in candidates:
-        confidence = 0
-        for i in (((evidence['implant_id'] != '0x0000000000000000') and (cand['target'].implant_id == evidence['implant_id'])), (cand['target'].crypto_guid == evidence['crypto_guid']), (cand['target'].hostname == evidence['hostname'])):
-            if i:
-                confidence += 1
+        confidence = sum(
+            bool(i)
+            for i in (
+                (
+                    (evidence['implant_id'] != '0x0000000000000000')
+                    and (cand['target'].implant_id == evidence['implant_id'])
+                ),
+                cand['target'].crypto_guid == evidence['crypto_guid'],
+                cand['target'].hostname == evidence['hostname'],
+            )
+        )
+
         for i in evidence['macs']:
             if (i.lower() in cand['target'].macs):
                 confidence += 1

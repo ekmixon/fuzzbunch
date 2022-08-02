@@ -83,8 +83,11 @@ def _dir_listing(path='*', mask='*', recursive=True, dirsonly=False):
         return []
     files = []
     for dir_item in obj.diritem:
-        for file_item in dir_item.fileitem:
-            files.append(os.path.join(dir_item.path, file_item.name))
+        files.extend(
+            os.path.join(dir_item.path, file_item.name)
+            for file_item in dir_item.fileitem
+        )
+
     return files
 
 def _print_lnk_info(lnk_file):
@@ -177,20 +180,24 @@ class LnkParser:
             self.target_type = 'File or Directory'
         else:
             self.target_type = 'Unknown'
-        self.file_attributes = []
-        for index in range(len(FILE_ATTRIBUTES)):
-            if ((self.header['file_attributes'] & (2 ** index)) > 0):
-                self.file_attributes.append(FILE_ATTRIBUTES[index])
+        self.file_attributes = [
+            FILE_ATTRIBUTES[index]
+            for index in range(len(FILE_ATTRIBUTES))
+            if ((self.header['file_attributes'] & (2**index)) > 0)
+        ]
+
         self.ctime = conv_time(int(self.header['ctimeL']), int(self.header['ctimeH']))
         self.mtime = conv_time(int(self.header['mtimeL']), int(self.header['mtimeH']))
         self.atime = conv_time(int(self.header['atimeL']), int(self.header['atimeH']))
         self.file_length = self.header['file_length']
         self.icon_number = self.header['icon_number']
-        self.show_window = []
-        for index in range(len(SHOW_WINDOW_STATES)):
-            if ((self.header['show_wnd'] & (2 ** index)) > 0):
-                self.show_window.append(SHOW_WINDOW_STATES[index])
-        self.hot_key = str(hex(self.header['hot_key']))
+        self.show_window = [
+            SHOW_WINDOW_STATES[index]
+            for index in range(len(SHOW_WINDOW_STATES))
+            if ((self.header['show_wnd'] & (2**index)) > 0)
+        ]
+
+        self.hot_key = hex(self.header['hot_key'])
         self.shell_item_id_list = self._get_val(file_handle, 1, 1)
         if ((int(self.header['flags']) & 2) > 0):
             txt = file_handle.read(4)
@@ -219,7 +226,7 @@ class LnkParser:
             if ((self.file_loc['flags'] & 2) > 0):
                 net_vol_table = process_volume_table(file_loc_raw, self.file_loc['net_vol_info_offset'], NET_VOL_TBL)
                 share_names = net_vol_table['net_sharename'].split('\x00')
-                net_vol_table['net_sharename'] = ('(%s) %s' % (share_names[0], share_names[1]))
+                net_vol_table['net_sharename'] = f'({share_names[0]}) {share_names[1]}'
                 self.file_loc['net_vol_table'] = net_vol_table
                 self.is_local = False
                 self.volume_type = 'N/A'

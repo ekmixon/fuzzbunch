@@ -36,8 +36,10 @@ def driver_list(echo=False):
         dsz.ui.Echo("Couldn't retrieve driver list. Is SCOFFRETAIL installed?", dsz.ERROR)
         return None
     drivers = dsz.cmd.data.Get('driversitem::driveritem', dsz.TYPE_OBJECT)
-    names = [dsz.cmd.data.ObjectGet(driver, 'name', dsz.TYPE_STRING)[0] for driver in drivers]
-    return names
+    return [
+        dsz.cmd.data.ObjectGet(driver, 'name', dsz.TYPE_STRING)[0]
+        for driver in drivers
+    ]
 
 def connect_to_database(connection_string):
     dsz.cmd.Run(('sql -action connect -connectstring "%s"' % connection_string), dsz.RUN_FLAG_RECORD)
@@ -104,11 +106,11 @@ def write_csv_output(command_id, query_folder, file_prefix):
     sql_xml_parser.write(data, header, output_file)
 
 def run_query_from_file(handle_id, query_file=None, echo=True, max_col_size=64000, mapping=None):
+    prompt = 'Where is the query file to run'
     while (not query_file):
-        prompt = 'Where is the query file to run'
         query_file = dsz.ui.GetString(prompt)
         if (not os.path.exists(query_file)):
-            dsz.ui.Echo(('%s does not exist... try again.' % query_file), dsz.ERROR)
+            dsz.ui.Echo(f'{query_file} does not exist... try again.', dsz.ERROR)
             query_file = None
     with open(query_file, 'rb') as input_handle:
         query = input_handle.read().strip()
@@ -121,13 +123,13 @@ def run_query(handle_id, query, echo=True, max_col_size=64000):
     echo_fun()
     query = query.replace('"', '\\"')
     command = 'background sql -action query -handle %s -maxcolumnsize %s -queryString "%s"'
-    command = (command % (handle_id, max_col_size, query))
-    print ''
+    command %= (handle_id, max_col_size, query)
+    echo_fun = (dsz.control.echo.On if echo else dsz.control.echo.Off)
     (status, command_id) = dsz.cmd.RunEx(command, dsz.RUN_FLAG_RECORD)
     task = BaseTask(command_id)
     while task.IsRunning():
         dsz.Sleep(1000)
-    dsz.ui.Echo(('Query complete, command ID: %s' % command_id), dsz.GOOD)
+    dsz.ui.Echo(f'Query complete, command ID: {command_id}', dsz.GOOD)
     echo_fun = (dsz.control.echo.Off if echo else dsz.control.echo.On)
     echo_fun()
     return (status, command_id)
@@ -139,10 +141,7 @@ def select_driver_menu(menu):
     for driver_name in driver_list():
         driver_menu.add_option(driver_name)
     result = driver_menu.execute(exit='Go Back...', menuloop=False)
-    if (result['selection'] == 0):
-        driver_name = UNSET
-    else:
-        driver_name = result['option']
+    driver_name = UNSET if (result['selection'] == 0) else result['option']
     menu.set_current_state(driver_name)
 if (__name__ == '__main__'):
     main()

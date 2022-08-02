@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-noGUI = True								
+noGUI = True
 unicodeHack = True						  
 
 import struct, sys, ctypes, re, time, unicodedata, csv, binascii, os, platform
@@ -13,7 +13,7 @@ SIAttributeSizeXP = 72
 SIAttributeSizeNT = 48
 
 
-if noGUI == False:
+if not noGUI:
 	if platform.system() == "Windows":
 		  import win32gui
 
@@ -28,24 +28,23 @@ class WindowsTime:
 	def __init__(self, low, high):
 		self.low = long(low)
 		self.high = long(high)
-		
+
 		if (low == 0) and (high == 0):
 			self.dt = 0
 			self.dtstr = "Not defined"
 			self.unixtime = 0
 			return
-		
+
 		# Windows NT time is specified as the number of 100 nanosecond intervals since January 1, 1601.
 		# UNIX time is specified as the number of seconds since January 1, 1970. 
 		# There are 134,774 days (or 11,644,473,600 seconds) between these dates.
 		self.unixtime = self.GetUnixTime()
-		
+
 		try:  
 			self.dt = datetime.fromtimestamp(self.unixtime)
-
 		  # Pass isoformat a delimiter if you don't like the default "T".
 			self.dtstr = self.dt.isoformat(' ')
-		  
+
 		except:
 			self.dt = 0
 			self.dtstr = "Invalid timestamp"
@@ -73,41 +72,30 @@ def decodeMFTmagic(s):
 # I had this coded incorrectly initially. Spencer Lynch identified and fixed the code. Many thanks!
 
 def decodeMFTisactive(s):
-	if s & 0x0001:
-		return 'Active'
-	else:
-		return 'Inactive'
+	return 'Active' if s & 0x0001 else 'Inactive'
 	
 def decodeMFTrecordtype(s):
 	tmpBuffer = s
-	if s & 0x0002:
-		tmpBuffer = 'Folder'
-	else:
-		tmpBuffer = 'File'
+	tmpBuffer = 'Folder' if s & 0x0002 else 'File'
 	if s & 0x0004:
-		tmpBuffer = "%s %s" % (tmpBuffer, '+ Unknown1')
+		tmpBuffer = f"{tmpBuffer} + Unknown1"
 	if s & 0x0008:
-		tmpBuffer = "%s %s" % (tmpBuffer, '+ Unknown2')
+		tmpBuffer = f"{tmpBuffer} + Unknown2"
 
 	return tmpBuffer
 
 def addNote(s):
-	
-	if 'notes' in MFTR:
-#		MFTR['notes'] = "%s | %s |" % (MFTR['notes'], s)
-		MFTR['notes'] = "%s | %s |" % (MFTR['notes'], s)
-	else:
-		MFTR['notes'] = "%s" % s
+
+	MFTR['notes'] = f"{MFTR['notes']} | {s} |" if 'notes' in MFTR else f"{s}"
 		
 
 def decodeMFTHeader(s):
 
-	d = {}
+	d = {'magic': struct.unpack("<I", s[:4])[0]}
 
-	d['magic'] = struct.unpack("<I", s[:4])[0]
 	d['upd_off'] = struct.unpack("<H",s[4:6])[0]
 	d['upd_cnt'] = struct.unpack("<H",s[6:8])[0]
-	d['lsn'] = struct.unpack("<d",s[8:16])[0]	
+	d['lsn'] = struct.unpack("<d",s[8:16])[0]
 	d['seq'] = struct.unpack("<H",s[16:18])[0]
 	d['link'] = struct.unpack("<H",s[18:20])[0]
 	d['attr_off'] = struct.unpack("<H",s[20:22])[0]
@@ -125,9 +113,8 @@ def decodeMFTHeader(s):
 	return d
 
 def decodeATRHeader(s):
-	
-	d = {}
-	d['type'] = struct.unpack("<L",s[:4])[0]
+
+	d = {'type': struct.unpack("<L",s[:4])[0]}
 	if d['type'] == 0xffffffff:
 		return d
 	d['len'] = struct.unpack("<L",s[4:8])[0]
@@ -153,9 +140,13 @@ def decodeATRHeader(s):
 	return d
 
 def decodeSIAttribute(s):
-	
-	d = {}
-	d['crtime'] = WindowsTime(struct.unpack("<L",s[:4])[0],struct.unpack("<L",s[4:8])[0])
+
+	d = {
+		'crtime': WindowsTime(
+			struct.unpack("<L", s[:4])[0], struct.unpack("<L", s[4:8])[0]
+		)
+	}
+
 	d['mtime'] = WindowsTime(struct.unpack("<L",s[8:12])[0],struct.unpack("<L",s[12:16])[0])
 	d['ctime'] = WindowsTime(struct.unpack("<L",s[16:20])[0],struct.unpack("<L",s[20:24])[0])
 	d['atime'] = WindowsTime(struct.unpack("<L",s[24:28])[0],struct.unpack("<L",s[28:32])[0])
@@ -167,16 +158,15 @@ def decodeSIAttribute(s):
 	d['sec_id'] = struct.unpack("<I",s[52:56])[0]	 # 4
 	d['quota'] = struct.unpack("<d",s[56:64])[0]		# 8
 	d['usn'] = struct.unpack("<d",s[64:72])[0]		# 8 - end of date to here is 40
-		
+
 	return d
 
 def decodeFNAttribute(s):
-	
+
 	hexFlag = False
 	# File name attributes can have null dates.
-	
-	d = {}
-	d['par_ref'] = struct.unpack("<Lxx", s[:6])[0]	# Parent reference nummber
+
+	d = {'par_ref': struct.unpack("<Lxx", s[:6])[0]}
 	d['par_seq'] = struct.unpack("<H",s[6:8])[0]		# Parent sequence number
 	d['crtime'] = WindowsTime(struct.unpack("<L",s[8:12])[0],struct.unpack("<L",s[12:16])[0])
 	d['mtime'] = WindowsTime(struct.unpack("<L",s[16:20])[0],struct.unpack("<L",s[20:24])[0])
@@ -187,8 +177,8 @@ def decodeFNAttribute(s):
 	d['flags'] = struct.unpack("<d",s[56:64])[0]			# 0x01=NTFS, 0x02=DOS
 	d['nlen'] = struct.unpack("B",s[64])[0]
 	d['nspace'] = struct.unpack("B",s[65])[0]
-	
-	
+
+
 
 	# The $MFT string is stored as \x24\x00\x4D\x00\x46\x00\x54. Ie, the first character is a single
 	# byte and the remaining characters are two bytes with the first byte a null.
@@ -205,27 +195,23 @@ def decodeFNAttribute(s):
 	#
 	# I just ran across an example of "any sequence of ..." - filenames with backspaces and newlines
 	# in them. Thus, the "isalpha" check. I really need to figure out how to handle Unicode better.
-	
-	if (unicodeHack):
+
+	if unicodeHack:
 		d['name'] = ''
 		for i in range(66, 66 + d['nlen']*2):	
-			if s[i] != '\x00':						 # Just skip over nulls
+			if s[i] != '\x00':		 # Just skip over nulls
 				if s[i] > '\x1F' and s[i] < '\x80':		  # If it is printable, add it to the string
-					d['name'] = d['name'] + s[i]
+					d['name'] += s[i]
 				else:
 					d['name'] = "%s0x%02s" % (d['name'], s[i].encode("hex"))
 					hexFlag = True
 
-	# This statement produces a valid unicode string, I just cannot get it to print correctly
-	# so I'm temporarily hacking it with the if (unicodeHack) above.
 	else:
 		d['name'] = s[66:66+d['nlen']*2]
-		
 # This didn't work
 #	d['name'] = struct.pack("\u	
 #	for i in range(0, d['nlen']*2, 2):
 #		d['name']=d['name'] + struct.unpack("<H",s[66+i:66+i+1])
-		
 # What follows is ugly. I'm trying to deal with the filename in Unicode and not doing well.
 # This solution works, though it is printing nulls between the characters. It'll do for now.
 #	d['name'] = struct.unpack("<%dH" % (int(d['nlen'])*2),s[66:66+(d['nlen']*2)])
@@ -235,15 +221,14 @@ def decodeFNAttribute(s):
 
 	if hexFlag:
 		addNote('Filename - chars converted to hex')
-		
+
 	return d
 
 def decodeAttributeList(s):
 
 	hexFlag = False
-	
-	d = {}
-	d['type'] = struct.unpack("<I",s[:4])[0]				# 4
+
+	d = {'type': struct.unpack("<I",s[:4])[0]}
 	d['len'] = struct.unpack("<H",s[4:6])[0]				# 2
 	d['nlen'] = struct.unpack("B",s[6])[0]				# 1
 	d['f1'] = struct.unpack("B",s[7])[0]					# 1
@@ -251,21 +236,21 @@ def decodeAttributeList(s):
 	d['file_ref'] = struct.unpack("<Lxx",s[16:22])[0]	 # 6
 	d['seq'] = struct.unpack("<H",s[22:24])[0]			# 2
 	d['id'] = struct.unpack("<H",s[24:26])[0]			 # 4
-	if (unicodeHack):
+	if unicodeHack:
 		d['name'] = ''
 		for i in range(26, 26 + d['nlen']*2):
-			if s[i] != '\x00':						 # Just skip over nulls
+			if s[i] != '\x00':		 # Just skip over nulls
 				if s[i] > '\x1F' and s[i] < '\x80':		  # If it is printable, add it to the string
-					d['name'] = d['name'] + s[i]
+					d['name'] += s[i]
 				else:
 					d['name'] = "%s0x%02s" % (d['name'], s[i].encode("hex"))
 					hexFlag = True
 	else:
 		d['name'] = s[26:26+d['nlen']*2]
- 
+
 	if hexFlag:
 		addNote('Filename - chars converted to hex')
-		  
+
 	return d
 
 def decodeVolumeInfo(s):
@@ -290,25 +275,18 @@ def decodeVolumeInfo(s):
 class ObjectID:
 	def __init__(self, s):
 		self.objid = s
-		if s == 0:
-			self.objstr = 'Undefined'
-		else:
-			self.objstr = self.FmtObjectID()
+		self.objstr = 'Undefined' if s == 0 else self.FmtObjectID()
 
 	def FmtObjectID(self):
-		string = "%s-%s-%s-%s-%s" % (binascii.hexlify(self.objid[0:4]),binascii.hexlify(self.objid[4:6]),
-			binascii.hexlify(self.objid[6:8]),binascii.hexlify(self.objid[8:10]),binascii.hexlify(self.objid[10:16]))
-			
-		return string
+		return f"{binascii.hexlify(self.objid[:4])}-{binascii.hexlify(self.objid[4:6])}-{binascii.hexlify(self.objid[6:8])}-{binascii.hexlify(self.objid[8:10])}-{binascii.hexlify(self.objid[10:16])}"
 
 def decodeObjectID(s):
 
-	d = {}
-	d['objid'] = ObjectID(s[0:16])
+	d = {'objid': ObjectID(s[:16])}
 	d['orig_volid'] = ObjectID(s[16:32])
 	d['orig_objid'] = ObjectID(s[32:48])
 	d['orig_domid'] = ObjectID(s[48:64])
-	
+
 	return d
 	
 
@@ -386,11 +364,11 @@ def anomalyDetect(files,recordNumber):
 					
 	
 def writeCSVFile():
-	
+
 	mftBuffer = ''
 	tmpBuffer = ''
 	filenameBuffer = ''
-	
+
 	if recordNumber == -1:
 		# Write headers
 		csvOutFile.writerow(['Record Number', 'Good', 'Active', 'Record type',
@@ -405,7 +383,7 @@ def writeCSVFile():
 						 'Index Allocation', 'Bitmap', 'Reparse Point', 'EA Information', 'EA',
 						 'Property Set', 'Logged Utility Stream', 'Log/Notes', 'STF FN Shift', 'uSec Zero', 'uniq_st_entry'])
 	elif 'baad' in MFTR:
-		csvOutFile.writerow(["%s" % recordNumber,"BAAD MFT Record"])
+		csvOutFile.writerow([f"{recordNumber}", "BAAD MFT Record"])
 	else:
 		mftBuffer = [recordNumber, decodeMFTmagic(MFTR['magic']), decodeMFTisactive(MFTR['flags']),
 						  decodeMFTrecordtype(int(MFTR['flags']))]
@@ -413,15 +391,15 @@ def writeCSVFile():
 
 		tmpBuffer = ["%d" % MFTR['seq']]
 		mftBuffer.extend(tmpBuffer)
-		
+
 		if MFTR['fncnt'] > 0:
 			mftBuffer.extend([str(MFTR['fn',0]['par_ref']), str(MFTR['fn',0]['par_seq'])])
 		else:
 			mftBuffer.extend(['NoParent', 'NoParent'])
 
 		mftBuffer.extend([MFTR['file_size']])
-		
-			
+
+
 		if MFTR['fncnt'] > 0:
 			filenameBuffer = [FNrecord['name'], "'"+str(SIrecord['crtime'].dtstr),
 						"'"+SIrecord['mtime'].dtstr, "'"+SIrecord['atime'].dtstr, "'"+SIrecord['ctime'].dtstr,
@@ -438,7 +416,7 @@ def writeCSVFile():
 						'NoFNRecord', 'NoFNRecord', 'NoFNRecord','NoFNRecord']
 
 		mftBuffer.extend(filenameBuffer)
-		
+
 		if 'objid' in MFTR:
 			objidBuffer = [MFTR['objid']['objid'].objstr, MFTR['objid']['orig_volid'].objstr,
 						 MFTR['objid']['orig_objid'].objstr, MFTR['objid']['orig_domid'].objstr]
@@ -464,12 +442,12 @@ def writeCSVFile():
 		mftBuffer.append('True') if 'ea' in MFTR else mftBuffer.append('False')
 		mftBuffer.append('True') if 'propertyset' in MFTR else mftBuffer.append('False')
 		mftBuffer.append('True') if 'loggedutility' in MFTR else mftBuffer.append('False')			
-		
+
 		if 'notes' in MFTR:						# Log of abnormal activity related to this record
 			mftBuffer.append(MFTR['notes'])
 		else:
 			mftBuffer.append('None')
-		
+
 		if 'stf-fn-shift' in MFTR:
 			mftBuffer.append('Y')
 		else:
@@ -479,18 +457,18 @@ def writeCSVFile():
 			mftBuffer.append('Y')
 		else:
 			mftBuffer.append('N')
-			 
+
 		if 'uniq_st_entry' in MFTR:
 			mftBuffer.append(MFTR['uniq_st_entry'])
-			
+
 		else:
 			mftBuffer.append('N')
-			 
+
 		if 'FN_cr_mod_match' in MFTR:
 			mftBuffer.append('Y')
 		else:
 			mftBuffer.append('N')
-			 
+
 
 
 		csvOutFile.writerow(mftBuffer)

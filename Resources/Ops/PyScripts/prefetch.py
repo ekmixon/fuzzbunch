@@ -10,15 +10,12 @@ from ops.pprint import pprint
 
 def getsectionA(handle, offset, numentries):
     handle.seek(offset)
-    sectionA = []
-    for i in range(0, numentries):
-        sectionA.append(fixendian(handle.read(4), 4))
-    return sectionA
+    return [fixendian(handle.read(4), 4) for _ in range(numentries)]
 
 def getsectionB(handle, offset, numentries):
     handle.seek(offset)
     sectionB = []
-    for i in range(0, numentries):
+    for _ in range(numentries):
         val1 = fixendian(handle.read(4), 4)
         val2 = fixendian(handle.read(4), 4)
         val3 = fixendian(handle.read(4), 4)
@@ -36,9 +33,8 @@ def getsectionC(handle, offset, length):
 def getsectionD(handle, offset, numvols, length, version):
     handle.seek(offset)
     sectionD = []
-    for i in range(0, numvols):
-        data = {}
-        data['labeloffset'] = unpack('<i', handle.read(4))[0]
+    for _ in range(numvols):
+        data = {'labeloffset': unpack('<i', handle.read(4))[0]}
         data['labellength'] = unpack('<i', handle.read(4))[0]
         us = (int(fixendian(handle.read(8), 8), 16) / 10.0)
         data['accesstimestamp'] = (datetime(1601, 1, 1) + timedelta(microseconds=us)).__str__()
@@ -47,10 +43,12 @@ def getsectionD(handle, offset, numvols, length, version):
         data['subsec1length'] = unpack('<i', handle.read(4))[0]
         data['subsec2offset'] = unpack('<i', handle.read(4))[0]
         data['subsec2length'] = unpack('<i', handle.read(4))[0]
-        if (version == 23):
-            data['vh9'] = unpack('<68s', handle.read(68))[0]
-        else:
-            data['vh9'] = unpack('<4s', handle.read(4))[0]
+        data['vh9'] = (
+            unpack('<68s', handle.read(68))[0]
+            if (version == 23)
+            else unpack('<4s', handle.read(4))[0]
+        )
+
         sectionD.append(data)
         data['vollabel'] = getvollabel(handle, offset, data['labeloffset'], data['labellength'])
         data['subsec1'] = getDsubsection1(handle, offset, data['subsec1offset'], version)
@@ -59,20 +57,19 @@ def getsectionD(handle, offset, numvols, length, version):
 
 def getDsubsection1(handle, sectiondoffset, offset, version):
     handle.seek((sectiondoffset + offset))
-    data = {}
-    data['vs1'] = unpack('<i', handle.read(4))[0]
+    data = {'vs1': unpack('<i', handle.read(4))[0]}
     data['numberentries'] = unpack('<i', handle.read(4))[0]
     if (version == 23):
         data['vs3'] = unpack('<4s', handle.read(4))[0]
     data['entries'] = []
-    for i in range(0, data['numberentries']):
+    for _ in range(data['numberentries']):
         data['entries'].append(fixendian(handle.read(8), 8))
     return data
 
 def getDsubsection2(handle, sectiondoffset, offset, length):
     handle.seek((sectiondoffset + offset))
     data = []
-    for i in range(0, length):
+    for _ in range(length):
         strlength = unpack('<H', handle.read(2))[0]
         unistring = codecs.getdecoder('utf_16')(handle.read((strlength * 2)), 'replace')[0].split('\x00')[0]
         null = handle.read(2)
@@ -95,36 +92,35 @@ def fixendian(bytes, length):
 
 def readfile(prefetchfile):
     data = {}
-    file = open(prefetchfile, 'rb')
-    data['fileversion'] = unpack('<i', file.read(4))[0]
-    data['magicstring'] = unpack('<4s', file.read(4))[0]
-    data['osindicator'] = unpack('<i', file.read(4))[0]
-    data['prefetchfilelength'] = unpack('<i', file.read(4))[0]
-    data['exename'] = codecs.getdecoder('utf_16')(file.read(60), 'replace')[0].split('\x00')[0]
-    data['prefetchhash'] = fixendian(file.read(4), 4)
-    data['h7'] = fixendian(file.read(4), 4)
-    data['sectionaoffset'] = unpack('<i', file.read(4))[0]
-    data['sectionanumentries'] = unpack('<i', file.read(4))[0]
-    data['sectionboffset'] = unpack('<i', file.read(4))[0]
-    data['sectionbnumentries'] = unpack('<i', file.read(4))[0]
-    data['sectioncoffset'] = unpack('<i', file.read(4))[0]
-    data['sectionclength'] = unpack('<i', file.read(4))[0]
-    data['sectiondoffset'] = unpack('<i', file.read(4))[0]
-    data['sectiondnumvols'] = unpack('<i', file.read(4))[0]
-    data['sectiondlength'] = unpack('<i', file.read(4))[0]
-    if (data['fileversion'] == 23):
-        data['h17'] = fixendian(file.read(4), 4)
-        data['h18'] = fixendian(file.read(4), 4)
-    us = (int(fixendian(file.read(8), 8), 16) / 10.0)
-    data['lastexectimestamp'] = (datetime(1601, 1, 1) + timedelta(microseconds=us)).__str__()
-    data['h20'] = fixendian(file.read(16), 16)
-    data['numexec'] = unpack('<i', file.read(4))[0]
-    data['h22'] = fixendian(file.read(4), 4)
-    data['sectiona'] = getsectionA(file, data['sectionaoffset'], data['sectionanumentries'])
-    data['sectionb'] = getsectionB(file, data['sectionboffset'], data['sectionbnumentries'])
-    data['sectionc'] = getsectionC(file, data['sectioncoffset'], data['sectionclength'])
-    data['sectiond'] = getsectionD(file, data['sectiondoffset'], data['sectiondnumvols'], data['sectiondlength'], data['fileversion'])
-    file.close()
+    with open(prefetchfile, 'rb') as file:
+        data['fileversion'] = unpack('<i', file.read(4))[0]
+        data['magicstring'] = unpack('<4s', file.read(4))[0]
+        data['osindicator'] = unpack('<i', file.read(4))[0]
+        data['prefetchfilelength'] = unpack('<i', file.read(4))[0]
+        data['exename'] = codecs.getdecoder('utf_16')(file.read(60), 'replace')[0].split('\x00')[0]
+        data['prefetchhash'] = fixendian(file.read(4), 4)
+        data['h7'] = fixendian(file.read(4), 4)
+        data['sectionaoffset'] = unpack('<i', file.read(4))[0]
+        data['sectionanumentries'] = unpack('<i', file.read(4))[0]
+        data['sectionboffset'] = unpack('<i', file.read(4))[0]
+        data['sectionbnumentries'] = unpack('<i', file.read(4))[0]
+        data['sectioncoffset'] = unpack('<i', file.read(4))[0]
+        data['sectionclength'] = unpack('<i', file.read(4))[0]
+        data['sectiondoffset'] = unpack('<i', file.read(4))[0]
+        data['sectiondnumvols'] = unpack('<i', file.read(4))[0]
+        data['sectiondlength'] = unpack('<i', file.read(4))[0]
+        if (data['fileversion'] == 23):
+            data['h17'] = fixendian(file.read(4), 4)
+            data['h18'] = fixendian(file.read(4), 4)
+        us = (int(fixendian(file.read(8), 8), 16) / 10.0)
+        data['lastexectimestamp'] = (datetime(1601, 1, 1) + timedelta(microseconds=us)).__str__()
+        data['h20'] = fixendian(file.read(16), 16)
+        data['numexec'] = unpack('<i', file.read(4))[0]
+        data['h22'] = fixendian(file.read(4), 4)
+        data['sectiona'] = getsectionA(file, data['sectionaoffset'], data['sectionanumentries'])
+        data['sectionb'] = getsectionB(file, data['sectionboffset'], data['sectionbnumentries'])
+        data['sectionc'] = getsectionC(file, data['sectioncoffset'], data['sectionclength'])
+        data['sectiond'] = getsectionD(file, data['sectiondoffset'], data['sectiondnumvols'], data['sectiondlength'], data['fileversion'])
     return data
 
 def getpretchfiles(prefetchdir):
@@ -133,8 +129,8 @@ def getpretchfiles(prefetchdir):
     cmd.path = prefetchdir
     obj = cmd.execute()
     prefetchfiles = []
-    index = 1
     if cmd.success:
+        index = 1
         for dir in obj.diritem:
             for file in dir.fileitem:
                 prefetchfiles.append({'index': index, 'name': file.name, 'size': file.size, 'path': dir.path, 'accessed': file.filetimes.accessed.time.split('.')[0].replace('T', ' '), 'modified': file.filetimes.modified.time.split('.')[0].replace('T', ' '), 'created': file.filetimes.created.time.split('.')[0].replace('T', ' ')})
@@ -143,7 +139,7 @@ def getpretchfiles(prefetchdir):
 
 def getfile(file):
     cmd = ops.cmd.getDszCommand('get')
-    cmd.arglist = [('-mask %s -path %s' % (file['name'], file['path']))]
+    cmd.arglist = [f"-mask {file['name']} -path {file['path']}"]
     obj = cmd.execute()
     if cmd.success:
         return os.path.join(dsz.lp.GetLogsDirectory(), obj.filelocalname[0].subdir, obj.filelocalname[0].localname)
@@ -168,11 +164,7 @@ def getlist(itemlist):
                 intlist.append(int(item))
             except:
                 continue
-    outlist = []
-    for item in itemlist:
-        if (item['index'] in intlist):
-            outlist.append(item)
-    return outlist
+    return [item for item in itemlist if (item['index'] in intlist)]
 
 def main():
     if (len(sys.argv) == 1):
@@ -190,16 +182,16 @@ def main():
             data = readfile(localfile)
             good_data = {'index': file['index'], 'name': file['name'], 'bytes': data['prefetchfilelength'], 'runs': data['numexec'], 'last': data['lastexectimestamp'], 'localfile': file['localfile'], 'sectionc': data['sectionc'], 'sectiond': data['sectiond']}
             shortparse.append(good_data)
-        print ''
+        dsz.ui.Echo('====================================')
         dsz.ui.Echo('====================================')
         dsz.ui.Echo('=========== Short Parse ============')
         dsz.ui.Echo('====================================')
         pprint(shortparse, header=['Index', 'Name', 'Byte Length', 'Number of Runs', 'Last Execute Time'], dictorder=['index', 'name', 'bytes', 'runs', 'last'])
         dsz.ui.Echo('Of the files you pulled back, which would you like to see the called files?', dsz.GOOD)
         parselist = getlist(shortparse)
-        print ''
+        dsz.ui.Echo('====================================')
         for file in parselist:
-            bannerstring = ('================ %s ====================' % file['name'])
+            bannerstring = f"================ {file['name']} ===================="
             bannercap = ('=' * len(bannerstring))
             dsz.ui.Echo(bannercap, dsz.GOOD)
             dsz.ui.Echo(bannerstring, dsz.GOOD)

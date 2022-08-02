@@ -22,7 +22,7 @@ class RemoteIdentification(object):
     def __init__(self, name):
         self.name = name
     def __repr__(self):
-        return "Identification: %s" % (self.name)
+        return f"Identification: {self.name}"
 
 #----------------------------------------------------------------
 # A ping request from the target.
@@ -49,7 +49,7 @@ class RemoteMessage(object):
         self.message = msg
 
     def __repr__(self):
-        return "RemoteMessage:  %s" % (self.message)
+        return f"RemoteMessage:  {self.message}"
 
 #----------------------------------------------------------------
 # A requested command has been run - but not necessarily finished
@@ -175,13 +175,13 @@ class DataObject(object):
 def _splitStep(step):
     try:
         m = re.match("(.*)\[([0-9+])\]$", step)
-        return (m.group(1), int(m.group(2)))
+        return m[1], int(m[2])
     except:
         return (step, -1)
 
 #----------------------------------------------------------------
 def _derive(data, steps):
-    if ((data == None) or (len(data) == 0)):
+    if data is None or len(data) == 0:
         return None
     newData = []
 
@@ -192,8 +192,5 @@ def _derive(data, steps):
             newData += a
         else:
             newData.append(a[index])
-            
-    if len(steps) == 1:
-        return newData
-    else:
-        return _derive(newData, steps[1:])
+
+    return newData if len(steps) == 1 else _derive(newData, steps[1:])

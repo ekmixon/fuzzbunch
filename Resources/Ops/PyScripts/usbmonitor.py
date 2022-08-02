@@ -12,10 +12,11 @@ def monitor_drives(interval):
         current_drives = []
         for drive in results.driveitem:
             current_drives.append(drive.drive)
-            if (drive.type == 'Removable'):
-                if (drive.drive not in known_drives):
-                    known_drives.append(drive.drive)
-                    ops.alert('Removable media decteced on drive {0} on host {1}'.format(drive.drive, ops.project.getTarget().hostname), dsz.GOOD, stamp=None)
+            if (drive.type == 'Removable') and (
+                drive.drive not in known_drives
+            ):
+                known_drives.append(drive.drive)
+                ops.alert('Removable media decteced on drive {0} on host {1}'.format(drive.drive, ops.project.getTarget().hostname), dsz.GOOD, stamp=None)
         for drive in known_drives:
             if (drive not in current_drives):
                 ops.alert('Removable Media removed from drive {0} on host {1}'.format(drive, ops.project.getTarget().hostname), stamp=None)

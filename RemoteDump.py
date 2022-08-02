@@ -5,15 +5,13 @@ import time
 
 
 port = ""
-while (port == ""):
+while not port:
 	port = raw_input("Please enter the dump port: ")
 	try:
 		port = int(port)
 		break
 	except:
 		port = ""
-		pass
-
 logDir = raw_input("Please enter the target log directory")
 
 logFile = "%s/Dump-%d.txt" % (logDir, port)

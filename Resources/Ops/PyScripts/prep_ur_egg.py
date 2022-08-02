@@ -12,7 +12,10 @@ if (not dsz.cmd.Run('python Payload\\_Prep.py -args "-action configure" -project
     ops.error('Payload was not properly configured, bailing...')
     sys.exit((-1))
 payloadfile = dsz.cmd.data.Get('Payload::File', dsz.TYPE_STRING)[0]
-uploadfilename = os.path.join(globalconfig.config['paths']['tmp'], ('%s_configured_egg' % eggname))
+uploadfilename = os.path.join(
+    globalconfig.config['paths']['tmp'], f'{eggname}_configured_egg'
+)
+
 distutils.file_util.copy_file(payloadfile, uploadfilename)
 try:
     dsz.cmd.Run(('python lib\\sendfile.py -args " --destdir imps  -i %s -o %s " -project Ops' % (uploadfilename, eggname)))

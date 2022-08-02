@@ -13,7 +13,7 @@ def main():
         cmdRes = myCommand.execute()
         dcName = cmdRes.domaincontroller[0].dcname
         domainName = cmdRes.domaincontroller[0].domainname
-        ops.info(('The dc is %s for %s' % (dcName, domainName)))
+        ops.info(f'The dc is {dcName} for {domainName}')
     except:
         ops.error('This machine does not appear to be part of the domain')
         quit()
@@ -35,7 +35,7 @@ def decrypt(encpass):
     import Crypto.Cipher.AES, codecs
     dc = codecs.getdecoder('Base64')
     mod = ((4 - (len(encpass[0]) % 4)) % 4)
-    if (not (mod == 0)):
+    if mod != 0:
         encpass += ('=' * mod)
     decode_encpass = dc(encpass)
     AESKey = 'N\x99\x06\xe8\xfc\xb6l\xc9\xfa\xf4\x93\x10b\x0f\xfe\xe8\xf4\x96\xe8\x06\xcc\x05y\x90 \x9b\t\xa43\xb6l\x1b'
@@ -45,8 +45,7 @@ def decrypt(encpass):
     except Exception as e:
         ops.error(e)
         quit()
-    clean_res = res.strip('\x10').replace('\x00', '')
-    return clean_res
+    return res.strip('\x10').replace('\x00', '')
 
 def parsexml(xmlstring):
     data = minidom.parseString(xmlstring)

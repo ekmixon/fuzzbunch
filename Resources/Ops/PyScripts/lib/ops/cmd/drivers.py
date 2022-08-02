@@ -19,14 +19,20 @@ class DriversCommand(ops.cmd.DszCommand, ):
         ops.cmd.DszCommand.__init__(self, plugin, **optdict)
 
     def validateInput(self):
-        for opt in self.optdict:
-            if (opt not in VALID_OPTIONS):
-                return False
-        if ((not self.driver_list) and (self.load is None) and (self.unload is None)):
-            return False
-        if (((self.load is not None) or (self.unload is not None)) and (self.minimal or self.nosignature or self.noversion)):
-            return False
-        return True
+        return next(
+            (False for opt in self.optdict if (opt not in VALID_OPTIONS)),
+            False
+            if (
+                (not self.driver_list)
+                and (self.load is None)
+                and (self.unload is None)
+            )
+            else self.load is None
+            and self.unload is None
+            or not self.minimal
+            and not self.nosignature
+            and not self.noversion,
+        )
 
     def __getAutoMinimal(self):
         return self.__autoMinimal
@@ -62,7 +68,7 @@ def mySafetyCheck(self):
         good = False
         msgparts.append('Your command did not pass input validation')
     msg = ''
-    if (len(msgparts) > 0):
+    if msgparts:
         msg = msgparts[0]
         for msgpart in msgparts[1:]:
             msg += ('\n\t' + msgpart)

@@ -39,7 +39,7 @@ class Client(object):
     # Name or Path.
     #-------------------------------------------------------
     def RequestFileRetrieval(self, name=None, path=None, fullpath=None, recursive=None, max=None):
-        data = dict()
+        data = {}
         if name != None:
             data["name"] = name
         if path != None:
@@ -58,7 +58,7 @@ class Client(object):
     # target.  
     #-------------------------------------------------------
     def RequestFileListing(self, path=None, name=None, recursive=False):
-        data = dict()
+        data = {}
         if name != None:
             data["name"] = name
         if path != None:
@@ -75,7 +75,7 @@ class Client(object):
     # Name or Path.
     #-------------------------------------------------------
     def RequestStrings(self, name=None, path=None, fullpath=None, recursive=None, max=None):
-        data = dict()
+        data = {}
         if name != None:
             data["name"] = name
         if path != None:
@@ -92,7 +92,7 @@ class Client(object):
     # Requests a drive listing
     #-------------------------------------------------------
     def RequestDriveListing(self):
-        return _sendNewRequest(self.sock, "drives", dict())
+        return _sendNewRequest(self.sock, "drives", {})
 
     #-------------------------------------------------------
     # Requests process information
@@ -157,8 +157,8 @@ class Client(object):
         dataReq = doc.createElement("TaskDataRequest")
         req.appendChild(dataReq)
         if (operation != None):
-            dataReq.setAttribute("operation", "%s" % (operation))
-        dataReq.setAttribute("taskId", "%s" % (taskId))
+            dataReq.setAttribute("operation", f"{operation}")
+        dataReq.setAttribute("taskId", f"{taskId}")
         if (includeChildren):
             dataReq.setAttribute("includeChildren", "true")
         else:
@@ -187,12 +187,12 @@ class Client(object):
             except:
                 break
 
-        if len == None:
+        if len is None:
             return None
-            
+
         (msgStr, ret) = (self.pending[:len],self.pending[len+1:])
         self.pending[:] = ret
-                
+
         msgXml = xml.dom.minidom.parseString(msgStr.decode("UTF-8"))
 
         msgXml.normalize()
@@ -206,8 +206,7 @@ class Client(object):
         elif root.nodeName == "RemotePong":
             return response.RemotePong()
 
-        print "Msg = %s" % (msgStr)
-        
+        len = None
         return UnknownResponse(msgXml)
 
 #--------------------------------------------------------
@@ -283,13 +282,13 @@ def _parseMessage(message):
 # Internal function
 #--------------------------------------------------------
 def _parseDataValues(nodes, dataStore=None):
-    if dataStore == None:
-        dataStore = dict()
+    if dataStore is None:
+        dataStore = {}
     for n in nodes:
         name = n.attributes["name"].nodeValue
         if n.nodeName == "ObjectValue":
             value = _parseDataValues(n.childNodes)
-            
+
         elif n.nodeName == "StringValue":
             value = unicode(_getStringFromNode(n))
 
@@ -300,21 +299,24 @@ def _parseDataValues(nodes, dataStore=None):
             value = bool(_getStringFromNode(n))
 
         else:
-            raise RuntimeError("unknown node:  %s" % (n.getNodeName))
-        
+            raise RuntimeError(f"unknown node:  {n.getNodeName}")
+
         try:
             current = dataStore[name]
         except KeyError:
             current = []
             dataStore[name] = current
-            
-        if len(current) > 0 and type(current[0]) != type(value):
-            raise RuntimeError("Same name, different types:  (%s, %s)" % (type(current[0]), type(value)))
+
+        if current and type(current[0]) != type(value):
+            raise RuntimeError(
+                f"Same name, different types:  ({type(current[0])}, {type(value)})"
+            )
+
         current.append(value)
     return dataStore
 
 def _parseKeyValuePairs(data):
-    ret = dict()
+    ret = {}
     for n in data:
         key = _getStringFromNode(n.getElementsByTagName("Key")[0])
         value = _getStringFromNode(n.getElementsByTagName("Value")[0])
@@ -325,11 +327,9 @@ def _parseKeyValuePairs(data):
 # Internal function
 #--------------------------------------------------------
 def _getStringFromNode(node):
-    if node == None:
+    if node is None:
         return ""
-    ret = []
-    for n in node.childNodes:
-        ret.append(n.nodeValue)
+    ret = [n.nodeValue for n in node.childNodes]
     return ''.join(ret)
 
 #--------------------------------------------------------

@@ -16,7 +16,7 @@ def processdir(dirobj):
     for dir in dirobj.diritem:
         path = dir.path
         if path.endswith('\\'):
-            path = path[0:(-1)]
+            path = path[:-1]
         for file in dir.fileitem:
             if (file.name in ['.', '..']):
                 continue
@@ -67,14 +67,14 @@ def gethashes(driver_names=[], maxage=3600):
     all_dirs += voldb.load_ops_object_bytag('DRIVERLIST_DIRS_SYSDIR')
     for driver in driver_names:
         try:
-            this_dir = voldb.load_ops_object_bytag(('DRIVERLIST_DIRS_%s' % driver.upper()))
+            this_dir = voldb.load_ops_object_bytag(f'DRIVERLIST_DIRS_{driver.upper()}')
             if ((datetime.now() - this_dir[0].__dict__['cache_timestamp']) > timedelta(seconds=maxage)):
                 continue
             all_dirs += this_dir
         except:
             continue
     for dirobj in all_dirs:
-        h.update(processdir(dirobj))
+        h |= processdir(dirobj)
     return h
 
 def getgrdo(driver_names=[], maxage=3600, gath=False):
@@ -86,26 +86,27 @@ def getgrdo(driver_names=[], maxage=3600, gath=False):
     all_grdos += voldb.load_ops_object_bytag('DRIVERLIST_GRDO_SYSDIR')
     for driver in driver_names:
         try:
-            this_grdo = voldb.load_ops_object_bytag(('DRIVERLIST_GRDO_%s' % driver.upper()))
+            this_grdo = voldb.load_ops_object_bytag(f'DRIVERLIST_GRDO_{driver.upper()}')
             if ((datetime.now() - this_grdo[0].__dict__['cache_timestamp']) > timedelta(seconds=maxage)):
                 continue
             all_grdos += this_grdo
         except:
             continue
     for grdoobj in all_grdos:
-        h.update(processgrdo(grdoobj))
+        h |= processgrdo(grdoobj)
     return h
 
 def rundriverlist(tdb, minimal=True, maxage=3600):
-    driverlist = ops.system.drivers.get_drivers_list(maxage=maxage, targetID=None, use_volatile=False, minimal=minimal)
-    return driverlist
+    return ops.system.drivers.get_drivers_list(
+        maxage=maxage, targetID=None, use_volatile=False, minimal=minimal
+    )
 
 def gathget(targetfilename=None, recordid=None):
     if ((targetfilename is None) and (recordid is None)):
         return False
     gathcmd = ops.cmd.getDszCommand('gangsterthief')
     if (recordid is not None):
-        gathcmd.arglist.append(('-get %s' % recordid))
+        gathcmd.arglist.append(f'-get {recordid}')
     else:
         gathcmd.arglist.append('-get')
     if (targetfilename is not None):
@@ -113,14 +114,17 @@ def gathget(targetfilename=None, recordid=None):
     gathobj = gathcmd.execute()
     if (gathobj.commandmetadata.status != 0):
         return False
-    localfilename = os.path.join(ops.LOGDIR, gathobj.filelocalname.subdir, gathobj.filelocalname.localname)
-    return localfilename
+    return os.path.join(
+        ops.LOGDIR,
+        gathobj.filelocalname.subdir,
+        gathobj.filelocalname.localname,
+    )
 
 def freshscan(driver_list, autofreshscan=False, gath=None):
     count = 1
     unidentified_list = []
     for driver in driver_list:
-        if (not ('UNIDENTIFIED' in driver['flags'])):
+        if 'UNIDENTIFIED' not in driver['flags']:
             continue
         driver['index'] = count
         count += 1
@@ -129,14 +133,20 @@ def freshscan(driver_list, autofreshscan=False, gath=None):
         pulled_date = ops.system.drivers.get_driver_report_date(driver=driver['file'].lower(), path=driver['dir'].lower(), sha1=driver['hash'], field='pulled')
         driver['pulled_date'] = pulled_date
         unidentified_list.append(driver)
-    if (len(unidentified_list) == 0):
+    if not unidentified_list:
         return
-    print '\n'
-    dsz.ui.Echo(('[%s] The following drivers were unidentified and have no associated name' % ops.timestamp()))
+    count = 1
+    dsz.ui.Echo(
+        f'[{ops.timestamp()}] The following drivers were unidentified and have no associated name'
+    )
+
     if (autofreshscan == False):
         dsz.ui.Echo('Which would you like to freshscan?')
     else:
-        dsz.ui.Echo(('These will be automatically sent to freshscan using userid %s' % autofreshscan))
+        dsz.ui.Echo(
+            f'These will be automatically sent to freshscan using userid {autofreshscan}'
+        )
+
     pprint(unidentified_list, header=['Index', 'Driver', 'Path', 'Last Pulled', 'Size', 'Modified', 'Accessed', 'Created'], dictorder=['index', 'file', 'dir', 'pulled_date', 'size', 'modified', 'accessed', 'created'])
     intlist = []
     if (autofreshscan == False):
@@ -162,8 +172,7 @@ def freshscan(driver_list, autofreshscan=False, gath=None):
         outlist = []
         userid = dsz.ui.GetInt('Please enter your ID')
     else:
-        for item in range(1, (len(unidentified_list) + 1)):
-            intlist.append(item)
+        intlist.extend(iter(range(1, (len(unidentified_list) + 1))))
         userid = autofreshscan
     if ((gath is None) or (gath == False)):
         usegath = dsz.ui.Prompt('Do you want to use GATH to get the drivers? (You must know if it is safe to do so)')
@@ -173,7 +182,7 @@ def freshscan(driver_list, autofreshscan=False, gath=None):
         if (item['index'] in intlist):
             try:
                 if usegath:
-                    dsz.ui.Echo(('Using GATH to get %s' % os.path.join(item['dir'], item['file'])))
+                    dsz.ui.Echo(f"Using GATH to get {os.path.join(item['dir'], item['file'])}")
                     localfile = gathget(targetfilename=os.path.join(item['dir'], item['file']))
                     if (localfile is not False):
                         ops.system.drivers.database_report_driver(driver=item['file'].lower(), path=item['dir'].lower(), sha1=item['hash'], field='pulled')
@@ -188,7 +197,7 @@ def freshscan(driver_list, autofreshscan=False, gath=None):
                     cmd = ops.cmd.getDszCommand('python', arglist=['windows/freshscan.py'], args=('"-remote %s -userid %s"' % (os.path.join(item['dir'], item['file']), userid)))
                     cmd.execute()
             except:
-                dsz.ui.Echo(('Could not freshscan %s' % item['file']), dsz.ERROR)
+                dsz.ui.Echo(f"Could not freshscan {item['file']}", dsz.ERROR)
 
 def cleanuptdb(tdb):
     tag_ids = tdb.get_cache_ids_by_tag(ops.system.drivers.DRIVERS_TAG)
@@ -241,10 +250,7 @@ def randomdrivercheck(name):
     return (None, None)
 
 def checktype(driver_types, type_lists):
-    for type in type_lists:
-        if (type in driver_types):
-            return True
-    return False
+    return any((type in driver_types) for type in type_lists)
 
 def driverlist(wait=False, quiet=False, maxage=3600, minimal=True, grabhashes=True, showall=False, autofreshscan=False, dofreshscan=True, gath=False, grdo=False):
     tdb = ops.db.get_tdb()

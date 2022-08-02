@@ -52,8 +52,7 @@ class TreeItem(object, ):
         self.children.add(child)
 
     def getiterator(self):
-        allnodes = []
-        allnodes.append(self)
+        allnodes = [self]
         for child in self.children:
             allnodes.extend(child.getiterator())
         return allnodes
@@ -70,8 +69,9 @@ class ValidationFailure(object, ):
         self.at = at
 
     def __repr__(self, *args, **kwargs):
-        repout = 'Attribute: {0}\nAction: {1}\nMessage: {2}'.format(self.at, self.act, self.msg)
-        return repout
+        return 'Attribute: {0}\nAction: {1}\nMessage: {2}'.format(
+            self.at, self.act, self.msg
+        )
 
 class AttributePackage(TreeItem, ):
 
@@ -155,7 +155,7 @@ class XMLAttributeActionDataSource(ActionDataSource, ):
             attribdisplay = attriblist.pop('display', None)
             attribdefault = attriblist.pop('default', None)
             for param in element.attrib:
-                if (not (param in attriblist)):
+                if param not in attriblist:
                     continue
                 try:
                     actklass = self.actionmap[param.lower()]
@@ -192,12 +192,14 @@ class XMLActionDataSource(ActionDataSource, ):
             actklass = self.actionmap[element.tag.lower()]
         except:
             return []
-        acttree = []
         actparams = element.attrib
         currentact = actklass(actparams, parent)
-        acttree.append(currentact)
-        for subactel in element.getchildren():
-            acttree.append(self.__buildActionTree(subactel, currentact))
+        acttree = [currentact]
+        acttree.extend(
+            self.__buildActionTree(subactel, currentact)
+            for subactel in element.getchildren()
+        )
+
         return acttree
 
 class XMLConditionalActionDataSource(XMLActionDataSource, ):
@@ -248,10 +250,10 @@ class ProcessableAction(object, ):
         raise NotImplementedError('Subclass must implement this.')
 
     def validateprocess(self, params):
-        for mandatoryparam in self.mandatoryprocessparams:
-            if (params.get(mandatoryparam) is None):
-                return False
-        return True
+        return all(
+            params.get(mandatoryparam) is not None
+            for mandatoryparam in self.mandatoryprocessparams
+        )
 
     def isprocparam(self, param):
         return (param in self.mandatoryprocessparams)
@@ -286,27 +288,38 @@ class Action(TreeItem, ):
         self.done = True
 
     def Validate(self):
-        validfails = []
         acfwlog.debug('Validating {0}'.format(self))
-        for manparam in self.mandatoryparams:
-            if (not (manparam in self.execparams.keys())):
-                validfails.append(ValidationFailure(self, 'Failed Validation! MANDATORY parameter missing: {0}'.format(manparam)))
+        validfails = [
+            ValidationFailure(
+                self,
+                'Failed Validation! MANDATORY parameter missing: {0}'.format(
+                    manparam
+                ),
+            )
+            for manparam in self.mandatoryparams
+            if manparam not in self.execparams.keys()
+        ]
+
         for param in self.execparams.keys():
-            if ((not (param in self.optionalparams)) and (not (param in self.mandatoryparams))):
+            if (
+                param not in self.optionalparams
+                and param not in self.mandatoryparams
+            ):
                 validfails.append(ValidationFailure(self, 'Failed Validation! This parameter is not a mandatory or optional parameter: {0}'.format(param)))
-            elif ((param in self.validparamvalues.keys()) and (not (self.execparams[param] in self.validparamvalues[param]))):
+            elif (
+                param in self.validparamvalues.keys()
+                and self.execparams[param] not in self.validparamvalues[param]
+            ):
                 validfails.append(ValidationFailure(self, "Failed Validation! This parameter's value is not a valid value. Please ensure the value is one of the following:\nParam: {0}\nValue: {1}\nValid Values: {2}".format(param, self.execparams[param], self.validparamvalues[param])))
         return validfails
 
     def GetVariable(self, varname):
-        if self.parent:
-            return self.parent.GetVariable(varname)
-        return None
+        return self.parent.GetVariable(varname) if self.parent else None
 
     def FindParamHandler(self, param):
         if ((param in self.mandatoryparams) or (param in self.optionalparams)):
             return self
-        elif (not (self.parent is None)):
+        elif self.parent is not None:
             return self.parent.FindParamHandler(param)
         else:
             return None
@@ -314,7 +327,7 @@ class Action(TreeItem, ):
     def GetLastResult(self):
         if getattr(self, 'result', None):
             return self.result
-        elif (not (self.parent is None)):
+        elif self.parent is not None:
             return self.parent.GetLastResult()
         else:
             return None

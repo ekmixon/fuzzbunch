@@ -7,13 +7,15 @@ import re
 def copyget(targetfilename, start=(-1), end=(-1), tail=(-1), name=''):
     targettemp = ((dsz.path.windows.GetSystemPaths()[0] + os.sep) + 'Temp')
     dsz.control.echo.Off()
-    dsz.cmd.Run(('dir -mask At* -path %s' % targettemp), dsz.RUN_FLAG_RECORD)
+    dsz.cmd.Run(f'dir -mask At* -path {targettemp}', dsz.RUN_FLAG_RECORD)
     dsz.control.echo.On()
-    badnums = list()
+    badnums = []
     for diritem in dsz.cmd.data.Get('DirItem', dsz.TYPE_OBJECT):
         for fileitem in dsz.cmd.data.ObjectGet(diritem, 'FileItem', dsz.TYPE_OBJECT):
-            match = re.search('[0-9]+', dsz.cmd.data.ObjectGet(fileitem, 'name', dsz.TYPE_STRING)[0])
-            if match:
+            if match := re.search(
+                '[0-9]+',
+                dsz.cmd.data.ObjectGet(fileitem, 'name', dsz.TYPE_STRING)[0],
+            ):
                 badnums.append(int(match.string[match.start():match.end()]))
     for i in range(1000000):
         if (i not in badnums):
@@ -37,7 +39,7 @@ def copyget(targetfilename, start=(-1), end=(-1), tail=(-1), name=''):
                 dsz.ui.Echo('Unable to delete temp file %s, please delete this!!!', dsz.WARNING)
                 return getresult
         else:
-            dsz.ui.Echo(('Get of copy failed, please manually delete %s' % tempfilename))
+            dsz.ui.Echo(f'Get of copy failed, please manually delete {tempfilename}')
             return getresult
     else:
         dsz.ui.Echo('Unable to copy file', dsz.WARNING)
@@ -64,7 +66,7 @@ def wrapget(targetfilename, warnsize=(-1), allowcopy=None):
             dsz.ui.Echo(('%d bytes, this is ok...' % filesize))
     getresult = trybaseget(targetfilename)
     if (not getresult.successful):
-        if (allowcopy == None):
+        if allowcopy is None:
             allowcopy = dsz.ui.Prompt('Cannot get with normal get, would you like to try a copyget?')
         if allowcopy:
             getresult = copyget(targetfilename)
@@ -75,7 +77,7 @@ def trybaseget(targetfilename, start=(-1), end=(-1), tail=(-1), name=''):
         targetfilename = targetfilename[1:(-1)]
     cmd = ('get "%s" ' % targetfilename)
     if (name != ''):
-        cmd += ('-name %s ' % name)
+        cmd += f'-name {name} '
     if ((start > (-1)) and (end == (-1))):
         cmd += (' -range %d ' % start)
     elif ((start > (-1)) and (end > (-1))):
@@ -86,14 +88,13 @@ def trybaseget(targetfilename, start=(-1), end=(-1), tail=(-1), name=''):
         cmd += (' -range 0 %d ' % end)
     elif (tail > (-1)):
         cmd += (' -tail %d ' % tail)
-    dsz.ui.Echo(('Running %s' % cmd))
+    dsz.ui.Echo(f'Running {cmd}')
     dsz.control.echo.Off()
     dsz.cmd.Run(cmd, dsz.RUN_FLAG_RECORD)
     dsz.control.echo.On()
     getcmdid = dsz.cmd.LastId()
     getmeta = metadata.DszCommandMetadata(getcmdid)
-    getresult = FileGetInfo()
-    return getresult
+    return FileGetInfo()
 
 class FileGetInfo(object, ):
 

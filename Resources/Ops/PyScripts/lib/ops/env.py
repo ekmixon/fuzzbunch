@@ -5,10 +5,11 @@ import dsz.script
 SELF = int(dsz.script.Env['script_command_id'])
 
 def get(env, cmdid=0, addr=dsz.script.Env['target_address']):
-    if (not dsz.env.Check(env, cmdid, addr)):
-        return None
-    else:
-        return unicode(dsz.env.Get(env, cmdid, addr), 'utf_8')
+    return (
+        unicode(dsz.env.Get(env, cmdid, addr), 'utf_8')
+        if dsz.env.Check(env, cmdid, addr)
+        else None
+    )
 
 def set(env, value, cmdid=0, addr=dsz.script.Env['target_address']):
     if (bool is type(value)):
@@ -23,11 +24,7 @@ def delete(env, cmdid=0, addr=dsz.script.Env['target_address']):
     dsz.env.Delete(env, cmdid, addr)
 
 def upper(env, cmdid=0, addr=dsz.script.Env['target_address']):
-    value = get(env, cmdid, addr)
-    if value:
-        return value.upper()
-    else:
-        return value
+    return value.upper() if (value := get(env, cmdid, addr)) else value
 
 def lower(env, cmdid=0, addr=dsz.script.Env['target_address']):
     value = get(env, cmdid, addr)

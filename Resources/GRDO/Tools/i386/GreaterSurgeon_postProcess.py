@@ -116,9 +116,12 @@ class ProcessGreaterSurgeonJson:
         print '  extracted file to %s' % (fileName,)
     
     def dump_module(self,m,name,indent=0):
-        ret_str = []
-        ret_str.append(' '*indent+'Module Score:%d\n' % m['score'])
-        ret_str.append(' '*indent+'MD5:%s\n' % binascii.hexlify(self.decrypt_blob(m['md5'])))
+        ret_str = [
+            ' ' * indent + 'Module Score:%d\n' % m['score'],
+            ' ' * indent
+            + 'MD5:%s\n' % binascii.hexlify(self.decrypt_blob(m['md5'])),
+        ]
+
         ret_str.append(' '*indent+'SHA1:%s\n' % binascii.hexlify(self.decrypt_blob(m['sha1'])))
         ret_str.append(' '*indent+'Entropy:%d\n' % m['entropy'])
         ret_str.append(' '*indent+'Service:%s\n' % m['service'])
@@ -135,7 +138,7 @@ class ProcessGreaterSurgeonJson:
         ret_str.append(' '*indent+'Registry Persistence:%s\n' % m['reg_persist'])
         ret_str.append(' '*indent+'Protected:%s\n' % m['protected'])
         ret_str.append(' '*indent+'Keylogger:%s\n' % m['keylogger'])
-        
+
         if(m.has_key('file') and self.dirname != None):
             self.write_file(name, self.decrypt_blob(m['file']))
         return ''.join(ret_str)
@@ -145,100 +148,114 @@ class ProcessGreaterSurgeonJson:
     
     def dump_injected_thread(self,t,indent=0):
         MEM_TYPE = { 'MEM_IMAGE': 0x1000000,
-                     'MEM_PRIVATE':0x20000} 
+                     'MEM_PRIVATE':0x20000}
         MEM_PROTECT = {'PAGE_NOACCESS':0x01,     
                        'PAGE_READONLY':0x02,     
                        'PAGE_READWRITE':0x04 ,    
                        'PAGE_WRITECOPY':0x08 ,    
                        'PAGE_EXECUTE':0x10  ,   
                        'PAGE_EXECUTE_READ':0x20 ,    
-                       'PAGE_EXECUTE_READWRITE':0x40 }  
-        ret_str = []
-        ret_str.append(' '*indent+'Start Address:%08X\n' % t[0])
-        ret_str.append(' '*indent+'State:%08X\n' % t[1])
-        ret_str.append(' '*indent+'Type:%08X ( ' % t[2])
+                       'PAGE_EXECUTE_READWRITE':0x40 }
+        ret_str = [
+            ' ' * indent + 'Start Address:%08X\n' % t[0],
+            ' ' * indent + 'State:%08X\n' % t[1],
+            ' ' * indent + 'Type:%08X ( ' % t[2],
+        ]
+
         for k,v in MEM_TYPE.iteritems():
-            if((t[2] & v) == v):
-                ret_str.append('%s ' % k)
-        ret_str.append(')\n') 
+            if ((t[2] & v) == v):
+                ret_str.append(f'{k} ')
+        ret_str.append(')\n')
         ret_str.append(' '*indent+'Protect:%08X ( ' % t[3])
         for k,v in MEM_PROTECT.iteritems():
-            if((t[3] & v) == v):
-                ret_str.append('%s ' % k)
-        ret_str.append(')\n') 
+            if ((t[3] & v) == v):
+                ret_str.append(f'{k} ')
+        ret_str.append(')\n')
         #ret_str.append('Start Address:%08X' % t[4])  #Not sure how to dump disasm
         return ''.join(ret_str)
     
     def dump_process(self,p,indent=0):
-        ret_str = []
-        ret_str.append(' '*indent+'Process Score:%d\n' % p['score'])
-        ret_str.append(' '*indent+'Executable:%s\n' % p['exe'])
-        ret_str.append(' '*indent+'Command Line:%s\n' % p['cmdline'])
-        ret_str.append(' '*indent+'Hidden:%s\n' % p['hidden'])
-        ret_str.append(' '*indent+'Suspended:%s\n' % p['suspended'])
-        ret_str.append(' '*indent+'GUI:%s\n' % p['gui'])
-        ret_str.append(' '*indent+'Reg Persistence:%s\n' % p['run'])
-        ret_str.append(' '*indent+'Service:%s\n' % p['service'])
-        ret_str.append(' '*indent+'Entry Point mismatch:%s\n' % p['entrypoint'])
-        
+        ret_str = [
+            ' ' * indent + 'Process Score:%d\n' % p['score'],
+            ' ' * indent + 'Executable:%s\n' % p['exe'],
+            ' ' * indent + 'Command Line:%s\n' % p['cmdline'],
+            ' ' * indent + 'Hidden:%s\n' % p['hidden'],
+            ' ' * indent + 'Suspended:%s\n' % p['suspended'],
+            ' ' * indent + 'GUI:%s\n' % p['gui'],
+            ' ' * indent + 'Reg Persistence:%s\n' % p['run'],
+            ' ' * indent + 'Service:%s\n' % p['service'],
+            ' ' * indent + 'Entry Point mismatch:%s\n' % p['entrypoint'],
+        ]
+
         name = p['module'].keys()[0]
-        ret_str.append(' '*indent+'Module:\n') 
+        ret_str.append(' '*indent+'Module:\n')
         ret_str.append(self.dump_module(p['module'][name],name,indent=indent+1))
         if(len(p['injected_threads']) > 0):
             for t in p['injected_threads']:
                 ret_str.append(' '*indent+'Injected Thread:\n')
-                ret_str.append(self.dump_injected_thread(t,indent=indent+1))    
+                ret_str.append(self.dump_injected_thread(t,indent=indent+1))
         return ''.join(ret_str)
         
         
     def dump_driver(self,p,indent=0):
-        ret_str = []
-        ret_str.append(' '*indent+'Driver Score: %d\n' % p['score'])
-        ret_str.append(' '*indent+'Path: %s\n' % p['module'].keys()[0])
-        
+        ret_str = [
+            ' ' * indent + 'Driver Score: %d\n' % p['score'],
+            ' ' * indent + 'Path: %s\n' % p['module'].keys()[0],
+        ]
+
         name = p['module'].keys()[0]
-        ret_str.append(' '*indent+'Module:\n') 
+        ret_str.append(' '*indent+'Module:\n')
         ret_str.append(self.dump_module(p['module'][name],name,indent=indent+1))
-    
+
         return ''.join(ret_str)
     
     def print_summary(self,indent=0):
         ret_str = []
-        
-        if 0 != len(self.keyloggerHooks):
+
+        if len(self.keyloggerHooks) != 0:
             ret_str.append(' '*indent+'Keylogger Hooks:\n')
-            
-            for h in self.keyloggerHooks:
-                ret_str.append(' '*indent+' handle: 0x%x / type 0x%x / offset 0x%x\n' % (h[0], h[1], h[2],))
-        
-        if 0 != len(self.keyloggerModules):
+
+            ret_str.extend(
+                ' ' * indent
+                + ' handle: 0x%x / type 0x%x / offset 0x%x\n'
+                % (
+                    h[0],
+                    h[1],
+                    h[2],
+                )
+                for h in self.keyloggerHooks
+            )
+
+        if len(self.keyloggerModules) != 0:
             ret_str.append(' '*indent+'Keylogger Candidate Modules:\n')
-        
-            for k in self.keyloggerModules:
-                ret_str.append(' '*indent+'%s\n' % k)
-        
+
+            ret_str.extend(' '*indent+'%s\n' % k for k in self.keyloggerModules)
         for p in self.processes:
             name = p['module'].keys()[0]
-            if((p['score']+p['module'][name]['score'] ) >= 50):
-                ret_str.append(' '*indent+'Process:\n')
-                ret_str.append(self.dump_process(p,indent=2))
-                ret_str.append('\n\n')
-        
+            if ((p['score']+p['module'][name]['score'] ) >= 50):
+                ret_str.extend(
+                    (
+                        ' ' * indent + 'Process:\n',
+                        self.dump_process(p, indent=2),
+                        '\n\n',
+                    )
+                )
+
         for name,m in self.modules.iteritems():
-            if(m['score'] >= 50):
-                ret_str.append(' '*indent+'Module:\n')
-                ret_str.append(' '*1+'%s \n' % name)
-                ret_str.append(self.dump_module(m,name,indent=2))
-                ret_str.append('\n\n')
-                
+            if (m['score'] >= 50):
+                ret_str.extend(
+                    (
+                        ' ' * indent + 'Module:\n',
+                        ' ' * 1 + '%s \n' % name,
+                        self.dump_module(m, name, indent=2),
+                        '\n\n',
+                    )
+                )
+
         for d in self.drivers:
             name = d['module'].keys()[0]
-            if((d['score']+d['module'][name]['score'] ) >= 50):
-                ret_str.append(' '*indent+'Driver:\n')
-                ret_str.append(self.dump_driver(d,indent=2))
-                ret_str.append('\n\n')
-        
-        
+            if ((d['score']+d['module'][name]['score'] ) >= 50):
+                ret_str.extend((' '*indent+'Driver:\n', self.dump_driver(d,indent=2), '\n\n'))
         return ''.join(ret_str)
     
     def dump_summary(self):

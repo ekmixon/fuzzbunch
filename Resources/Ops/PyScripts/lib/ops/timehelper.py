@@ -10,17 +10,20 @@ def parse_interval_string(interval, delimiter='-'):
     numbers = '[0-9]'
     age_types = '[smhdwy]'
     agetypes_re = re.compile(age_types, re.IGNORECASE)
-    age_spec = ('(?:%s+%s?)+' % (numbers, age_types))
+    age_spec = f'(?:{numbers}+{age_types}?)+'
     agespec_re = re.compile(age_spec, re.IGNORECASE)
-    period_re = re.compile(('^%s( *%s *%s?)?$' % (age_spec, delimiter, age_spec)), re.IGNORECASE)
+    period_re = re.compile(
+        f'^{age_spec}( *{delimiter} *{age_spec}?)?$', re.IGNORECASE
+    )
+
     if (period_re.match(interval) is None):
         return (None, None)
     period_list = agespec_re.findall(interval)
     if (len(period_list) == 1):
         period_list.append(period_list[(-1)])
     if ((len(agetypes_re.findall(period_list[0])) == 0) and (len(agetypes_re.findall(period_list[1])) == 0)):
-        period_list[0] = (period_list[0] + 's')
-        period_list[1] = (period_list[1] + 's')
+        period_list[0] = f'{period_list[0]}s'
+        period_list[1] = f'{period_list[1]}s'
     elif (len(agetypes_re.findall(period_list[0])) == 0):
         period_list[0] = (period_list[0] + agetypes_re.findall(period_list[1])[(-1)])
     elif (len(agetypes_re.findall(period_list[1])) == 0):
@@ -53,7 +56,7 @@ def get_seconds_from_age(age):
     numbers = '[0-9]'
     age_types = '[smhdwy]'
     agetypes_re = re.compile(age_types, re.IGNORECASE)
-    age_spec = ('%s+%s' % (numbers, age_types))
+    age_spec = f'{numbers}+{age_types}'
     agespec_re = re.compile(age_spec, re.IGNORECASE)
     found_ages = agespec_re.findall(age)
     total_seconds = 0
@@ -76,15 +79,13 @@ def get_age_from_seconds(seconds):
     (days, seconds) = divmod(seconds, ((60 * 60) * 24))
     (hours, seconds) = divmod(seconds, (60 * 60))
     (minutes, seconds) = divmod(seconds, 60)
-    agestring = ''
-    if (days != 0):
-        agestring = ('%sd' % days)
+    agestring = f'{days}d' if (days != 0) else ''
     if (hours != 0):
-        agestring += ('%sh' % hours)
+        agestring += f'{hours}h'
     if (minutes != 0):
-        agestring += ('%sm' % minutes)
+        agestring += f'{minutes}m'
     if (seconds != 0):
-        agestring += ('%ss' % seconds)
+        agestring += f'{seconds}s'
     return agestring
 
 def get_gmttime_from_remote():
@@ -93,8 +94,9 @@ def get_gmttime_from_remote():
 def get_first_gmttime_from_remote():
     first_time_cmdid = ops.cmd.get_filtered_command_list(goodwords=['time'], cpaddrs=[ops.TARGET_ADDR])[0]
     timeobject = ops.cmd.generatedata(first_time_cmdid)
-    timestring = ('%s %s' % (timeobject.timeitem.gmttime.date, timeobject.timeitem.gmttime.time))
-    return datetime.datetime(*time.strptime(timestring, '%Y-%m-%d %H:%M:%S')[0:6])
+    timestring = f'{timeobject.timeitem.gmttime.date} {timeobject.timeitem.gmttime.time}'
+
+    return datetime.datetime(*time.strptime(timestring, '%Y-%m-%d %H:%M:%S')[:6])
 
 def delta(age):
     return datetime.timedelta(seconds=ops.timehelper.get_seconds_from_age(age))

@@ -18,7 +18,12 @@ RESDIR = dsz.lp.GetResourcesDirectory()
 PROJECT = (dsz.env.Get('OPS_PROJECTNAME') if dsz.env.Check('OPS_PROJECTNAME') else None)
 PREPS = os.path.normpath(os.path.join(RESDIR, '..', 'Preps'))
 PROJECT_PREPS = (os.path.join(PREPS, PROJECT) if (PROJECT is not None) else None)
-TARGET_PREPS = (os.path.join(PROJECT_PREPS, (TARGET_IP + 'w')) if (PROJECT_PREPS is not None) else None)
+TARGET_PREPS = (
+    os.path.join(PROJECT_PREPS, f'{TARGET_IP}w')
+    if PROJECT_PREPS is not None
+    else None
+)
+
 DSZDISKSDIR = os.path.normpath(os.path.join(RESDIR, '..'))
 OPSDIR = os.path.join(RESDIR, 'Ops')
 DATA = os.path.join(OPSDIR, 'Data')
@@ -34,10 +39,10 @@ def datestamp():
     return time.strftime('%Y-%m-%d')
 
 def datetimestamp():
-    return ((datestamp() + ' ') + timestamp())
+    return f'{datestamp()} {timestamp()}'
 
 def targetdatetimestamp():
-    return ((datetimestamp() + ' ') + TARGET_ADDR)
+    return f'{datetimestamp()} {TARGET_ADDR}'
 
 def agestring(delta):
     retval = ''
@@ -57,7 +62,7 @@ def utf8(msg):
     return (msg.encode('utf8') if (type(msg) is unicode) else msg)
 
 def info(msg, type=dsz.GOOD, stamp=None):
-    dsz.ui.Echo(('[%s] %s' % ((stamp if stamp else targetdatetimestamp()), utf8(msg))), type)
+    dsz.ui.Echo(f'[{stamp or targetdatetimestamp()}] {utf8(msg)}', type)
 
 def warn(msg, stamp=None):
     info(msg, type=dsz.WARNING, stamp=stamp)
@@ -70,7 +75,7 @@ def pause(msg=None):
 
 def alert(msg, type=dsz.WARNING, stamp=None):
     msg = msg.replace('"', '\\"')
-    cmdline = ('warn "[%s] %s"' % ((stamp if stamp else datetimestamp()), utf8(msg)))
+    cmdline = 'warn "[%s] %s"' % (stamp or datetimestamp(), utf8(msg))
     if (type == dsz.DEFAULT):
         cmdline += ' -default'
     elif (type == dsz.ERROR):
@@ -82,6 +87,6 @@ def alert(msg, type=dsz.WARNING, stamp=None):
 def preload(cmd):
     flags = dsz.control.Method()
     dsz.control.echo.Off()
-    ret = dsz.cmd.Run(('available -command %s -load' % cmd))
+    ret = dsz.cmd.Run(f'available -command {cmd} -load')
     del flags
     return ret

@@ -37,9 +37,11 @@ if (__name__ == '__main__'):
     if options.oldPayDir:
         options.payDir = options.oldPayDir
     installers = (((ops.cmd.get_filtered_command_list(isrunning=True, goodwords=['pc_install']) + ops.cmd.get_filtered_command_list(isrunning=True, goodwords=['pc2.2_install'])) + ops.cmd.get_filtered_command_list(isrunning=True, goodwords=['pc_upgrade'])) + ops.cmd.get_filtered_command_list(isrunning=True, goodwords=['pc2.2_upgrade']))
-    cpaddrs = []
-    for i in installers:
-        cpaddrs.append(dsz.cmd.data.Get('commandmetadata::destination', dsz.TYPE_STRING, i)[0])
+    cpaddrs = [
+        dsz.cmd.data.Get('commandmetadata::destination', dsz.TYPE_STRING, i)[0]
+        for i in installers
+    ]
+
     if (len(cpaddrs) != 1):
         ops.warn('Could not determine target CP address for OS information because there are multiple installers running.')
         ops.warn('Please select a target:')
@@ -55,17 +57,15 @@ if (__name__ == '__main__'):
             sys.exit((-1))
         else:
             cpaddr = result['option']
-    elif (len(cpaddrs) < 1):
-        pass
-    else:
+    elif len(cpaddrs) >= 1:
         cpaddr = cpaddrs[0]
     if (options.project is None):
         options.project = ops.env.get('OPS_PROJECTNAME', addr=cpaddr)
-        if (options.project is None):
-            options.project = ops.PROJECT
+    if (options.project is None):
+        options.project = ops.PROJECT
     dataDir = os.path.join(options.payDir, 'data')
     gmtStamp = time.strftime('%Y-%m-%d-[%H-%M-%S]')
-    randDir = os.path.join(config['paths']['tmp'], ((options.project + '-') + gmtStamp))
+    randDir = os.path.join(config['paths']['tmp'], f'{options.project}-{gmtStamp}')
     os.makedirs(randDir)
     if options.verbose:
         ops.info(("Created random directory '%s'" % randDir))
@@ -80,7 +80,7 @@ if (__name__ == '__main__'):
     shutil.copy(os.path.join(dataDir, 'exec.properties'), randDir)
     shutil.copy(os.path.join(dataDir, 'public_key.bin'), randDir)
     shutil.copy(os.path.join(dataDir, 'private_key.bin'), randDir)
-    tempzipname = ('%s-%s-%s-PCID.zip' % (options.userID, options.project, gmtStamp))
+    tempzipname = f'{options.userID}-{options.project}-{gmtStamp}-PCID.zip'
     try:
         sendfile.main(randDir, outfilename=tempzipname)
     except:
@@ -94,19 +94,22 @@ if (__name__ == '__main__'):
                 pcversion = property[1]
                 break
     if options.rename:
-        renamed = ('%s.sent-%s' % (options.payDir, gmtStamp))
+        renamed = f'{options.payDir}.sent-{gmtStamp}'
         os.rename(options.payDir, renamed)
         if options.verbose:
             ops.info(("Renamed payload directory to '%s'" % renamed))
     print()
     dsz.ui.Echo('------------------------------------------------------------', dsz.WARNING)
-    print(('User ID                   : %s' % options.userID))
-    print(('Project                   : %s' % options.project))
-    print(('PC Version                : %s' % pcversion))
-    print(('OS Platform               : %s' % systemversion.versioninfo.friendlyplatform))
-    print(('OS Service Pack           : %s' % systemversion.versioninfo.extrainfo))
-    print(('Payload time stamp        : %s' % gmtStamp))
-    print(('Payload sent to fastmonkey: %s' % tempzipname))
+    print(f'User ID                   : {options.userID}')
+    print(f'Project                   : {options.project}')
+    print(f'PC Version                : {pcversion}')
+    print(
+        f'OS Platform               : {systemversion.versioninfo.friendlyplatform}'
+    )
+
+    print(f'OS Service Pack           : {systemversion.versioninfo.extrainfo}')
+    print(f'Payload time stamp        : {gmtStamp}')
+    print(f'Payload sent to fastmonkey: {tempzipname}')
     print(('Pastable if you need to re-send:\n    copyfast -i %s -o %s' % (randDir, tempzipname)))
     dsz.ui.Echo('------------------------------------------------------------', dsz.WARNING)
     print('\nVerify that the payload you process matches the information you just sent.\n')

@@ -25,7 +25,7 @@ def printlog(quietprint=True):
         smsg = 'soti_check: '
         for msg in _logmsgs:
             if (msg[1] != ''):
-                smsg += (msg[1] + ' ')
+                smsg += f'{msg[1]} '
         dsz.ui.Echo(smsg, dsz.GOOD)
     else:
         dsz.ui.Echo('soti_check:', dsz.GOOD)
@@ -38,11 +38,16 @@ def containers(quiet=False):
     fontsdir = ops.files.dirs.get_dirlisting(path=remoteFontsDir, mask='*.ttf', maxage=0)
     foundContainers = []
     for diritem in fontsdir.diritem:
-        for font in diritem.fileitem:
-            if (font.name in SOTIContainers):
-                foundContainers.append(font)
-    if (int(len(foundContainers)) > 0):
-        log(('  Found %d SOTI container(s);' % int(len(foundContainers))), ('Found %d SOTI container(s);' % int(len(foundContainers))))
+        foundContainers.extend(
+            font for font in diritem.fileitem if (font.name in SOTIContainers)
+        )
+
+    if foundContainers:
+        log(
+            '  Found %d SOTI container(s);' % len(foundContainers),
+            'Found %d SOTI container(s);' % len(foundContainers),
+        )
+
         for container in foundContainers:
             log(('    %s (%d)' % (container.fullpath, container.size)), '')
     else:

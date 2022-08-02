@@ -54,7 +54,7 @@ def get_processlist(minimal=True, maxage=timedelta(seconds=0), targetID=None):
         return retval.processlist
     proc_cmd = ops.cmd.getDszCommand('processes', list=True, minimal=minimal)
     if (ops.project.getTargetID() != targetID):
-        proc_cmd.dszdst = ops.project.selectBestCPAddress(targetID, ('run %s' % proc_cmd))
+        proc_cmd.dszdst = ops.project.selectBestCPAddress(targetID, f'run {proc_cmd}')
     proc_list = proc_cmd.execute()
     if (proc_list is None):
         raise Exception('Command failed to execute')
@@ -95,17 +95,18 @@ def find_process_monitor_commands(allow_ignore=True, targetID=None):
     return ops.cmd.get_filtered_command_list(cpaddrs=target_addrs, isrunning=True, goodwords=goodwords, badwords=badwords)
 
 def build_process_tree_recurse(proclist, ppid):
-    retval = list()
     rootprocs = filter((lambda x: (x.parentid == ppid)), proclist)
-    for rootproc in rootprocs:
-        retval.append((rootproc, build_process_tree_recurse(proclist, rootproc.id)))
-    return retval
+    return [
+        (rootproc, build_process_tree_recurse(proclist, rootproc.id))
+        for rootproc in rootprocs
+    ]
 
 def build_process_tree(proclist):
-    retval = list()
-    for proc in filter((lambda x: (x.id == 0)), proclist):
-        retval.append((proc, []))
+    retval = [(proc, []) for proc in filter((lambda x: (x.id == 0)), proclist)]
     rootprocs = filter((lambda x: (((x.parentid == 0) and (x.id != 0)) or (len(filter((lambda y: (y.id == x.parentid)), proclist)) == 0))), proclist)
-    for rootproc in rootprocs:
-        retval.append((rootproc, build_process_tree_recurse(proclist, rootproc.id)))
+    retval.extend(
+        (rootproc, build_process_tree_recurse(proclist, rootproc.id))
+        for rootproc in rootprocs
+    )
+
     return retval

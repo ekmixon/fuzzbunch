@@ -18,10 +18,7 @@ class GroupsCommand(ops.cmd.DszCommand, ):
         ops.cmd.DszCommand.__init__(self, plugin, **optdict)
 
     def validateInput(self):
-        for opt in self.optdict:
-            if (opt not in VALID_OPTIONS):
-                return False
-        return True
+        return all(opt in VALID_OPTIONS for opt in self.optdict)
     local = property((lambda x: getBoolOption(x, 'local')), (lambda x, y: setBoolOption(x, y, 'local')))
     remote = property((lambda x: getBoolOption(x, 'remote')), (lambda x, y: setBoolOption(x, y, 'remote')))
     target = property((lambda x: getValueOption(x, 'target')), (lambda x, y: setStringOption(x, y, 'target')))

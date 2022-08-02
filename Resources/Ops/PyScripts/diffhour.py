@@ -9,10 +9,28 @@ from ops.parseargs import ArgumentParser
 filters = ['.', '..']
 
 def _checkage(age):
-    for char in age:
-        if (not (char in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'y', 'w', 'd', 'h', 'm', 's'])):
-            return False
-    return True
+    return all(
+        char
+        in [
+            '0',
+            '1',
+            '2',
+            '3',
+            '4',
+            '5',
+            '6',
+            '7',
+            '8',
+            '9',
+            'y',
+            'w',
+            'd',
+            'h',
+            'm',
+            's',
+        ]
+        for char in age
+    )
 
 def _getsafeword(agearg):
     targetgmt = ops.system.clocks.gmtime()
@@ -22,14 +40,20 @@ def _getsafeword(agearg):
     return (afterdatetime.strftime('%Y-%m-%d %H:%M:%S'), beforedatetime.strftime('%Y-%m-%d %H:%M:%S'))
 
 def _getrangeword(agearg, datestring):
-    fromdatetime = datetime.datetime(*time.strptime(datestring, '%Y-%m-%d %H:%M:%S')[0:6])
+    fromdatetime = datetime.datetime(
+        *time.strptime(datestring, '%Y-%m-%d %H:%M:%S')[:6]
+    )
+
     ageseconds = ops.timehelper.get_seconds_from_age(agearg)
     afterdatetime = (fromdatetime - timedelta(seconds=ageseconds))
     beforedatetime = (fromdatetime + timedelta(seconds=0))
     return (afterdatetime.strftime('%Y-%m-%d %H:%M:%S'), beforedatetime.strftime('%Y-%m-%d %H:%M:%S'))
 
 def _getcenteredword(agearg, datestring):
-    fromdatetime = datetime.datetime(*time.strptime(datestring, '%Y-%m-%d %H:%M:%S')[0:6])
+    fromdatetime = datetime.datetime(
+        *time.strptime(datestring, '%Y-%m-%d %H:%M:%S')[:6]
+    )
+
     ageseconds = ops.timehelper.get_seconds_from_age(agearg)
     beforedatetime = (fromdatetime + timedelta(seconds=ageseconds))
     return beforedatetime.strftime('%Y-%m-%d %H:%M:%S')
@@ -42,7 +66,12 @@ def _filterfilesbyname(dirres):
 
 def _statehash(fileitem):
     myhash = hashlib.md5()
-    myhash.update(ops.utf8(('%s%s%s' % (fileitem.filetimes.modified.time, fileitem.dszparent.path, fileitem.name))))
+    myhash.update(
+        ops.utf8(
+            f'{fileitem.filetimes.modified.time}{fileitem.dszparent.path}{fileitem.name}'
+        )
+    )
+
     return binascii.hexlify(myhash.digest())
 
 def _dohour(mask='*', path='*', age='1h', recursive=True, safe=False, nodiff=False, noquiet=False, fromtime=None):
@@ -51,21 +80,18 @@ def _dohour(mask='*', path='*', age='1h', recursive=True, safe=False, nodiff=Fal
         dircmd.age = ops.timehelper.get_age_from_seconds(ops.timehelper.get_seconds_from_age(age.lower()))
     elif safe:
         (dircmd.after, dircmd.before) = _getsafeword(age.lower())
-    elif (fromtime is not None):
+    else:
         (dircmd.after, dircmd.before) = _getrangeword(age.lower(), fromtime)
     dircmd.norecord = nodiff
     dircmd.dszquiet = (not noquiet)
-    ops.info(('Running %s' % dircmd))
+    ops.info(f'Running {dircmd}')
     dirobj = dircmd.execute()
     if (not dircmd.success):
         ops.error('=== Dir failed with following errors ===')
         for error in dirobj.commandmetadata.friendlyerrors[(-1)]:
             ops.error(error)
         return False
-    if (not nodiff):
-        return dirobj
-    else:
-        return True
+    return True if nodiff else dirobj
 
 def _recordstate(dirres, filename, restart=False, hashfunc=_statehash):
     if (os.path.exists(filename) and (not restart)):
@@ -85,20 +111,19 @@ def _recordstate(dirres, filename, restart=False, hashfunc=_statehash):
 
 def _dodiff(dirres, filename, hashfunc=_statehash):
     previous = []
-    retval = []
     recordfile = open(filename, 'r')
     try:
-        for line in recordfile:
-            previous.append(line[:(-1)])
+        previous.extend(line[:(-1)] for line in recordfile)
     except:
         ops.error('Could not open previous results')
         raise Exception('Could not open previous dir results for comparison')
     finally:
         recordfile.close()
-    for modfile in _filterfilesbyname(dirres):
-        if (hashfunc(modfile) not in previous):
-            retval.append(modfile)
-    return retval
+    return [
+        modfile
+        for modfile in _filterfilesbyname(dirres)
+        if (hashfunc(modfile) not in previous)
+    ]
 
 def main(mask='*', path='*', age='1h', recursive=True, restart=False, safe=False, noquiet=False, fromtime=None):
     if (not os.path.exists(os.path.join(ops.TARGET_TEMP, 'hour.txt'))):
@@ -111,22 +136,21 @@ def main(mask='*', path='*', age='1h', recursive=True, restart=False, safe=False
         if (dirres is False):
             return False
         diffs = _filterfilesbyname(dirres)
-        _recordstate(dirres, os.path.join(os.path.join(ops.TARGET_TEMP, 'hour.txt')), restart)
     else:
-        ops.info(('Running differential check going back %s' % age))
+        ops.info(f'Running differential check going back {age}')
         dirres = _dohour(mask=mask, path=path, age=age, recursive=recursive, safe=safe, noquiet=noquiet, fromtime=fromtime)
         if (dirres is False):
             return False
         diffs = _dodiff(dirres, os.path.join(os.path.join(ops.TARGET_TEMP, 'hour.txt')))
-        _recordstate(dirres, os.path.join(os.path.join(ops.TARGET_TEMP, 'hour.txt')), restart)
+    _recordstate(dirres, os.path.join(os.path.join(ops.TARGET_TEMP, 'hour.txt')), restart)
     diffnames = []
     for modfile in diffs:
-        prettyfiletime = modfile.filetimes.modified.time[0:19].replace('T', ' ')
+        prettyfiletime = modfile.filetimes.modified.time[:19].replace('T', ' ')
         if modfile.attributes.directory:
             diffnames.append({'Path': modfile.dszparent.path, 'Name': modfile.name, 'Size': '<DIR>', 'Modtime': prettyfiletime})
         else:
             diffnames.append({'Path': modfile.dszparent.path, 'Name': modfile.name, 'Size': modfile.size, 'Modtime': prettyfiletime})
-    if (len(diffnames) > 0):
+    if diffnames:
         ops.pprint.pprint(diffnames, header=['Modtime', 'Size', 'Path', 'Name'], dictorder=['Modtime', 'Size', 'Path', 'Name'])
     else:
         ops.info('No changes detected')
@@ -163,21 +187,30 @@ if (__name__ == '__main__'):
     if (options.fromtime is not None):
         date_re = '((1[0-9]|2[0-9])\\d\\d)-(0[1-9]|1[0-2])-([0-2][0-9]|3[0-2])'
         time_re = '(2[0-3]|[0-1][0-9]):([0-5][0-9]):([0-5][0-9])'
-        if (re.match(('^%s$' % date_re), options.fromtime.strip('"')) is not None):
+        if re.match(f'^{date_re}$', options.fromtime.strip('"')) is not None:
             fromtime = ('%s 00:00:00' % options.fromtime.strip('"'))
-        elif (re.match(('^%s %s$' % (date_re, time_re)), options.fromtime.strip('"')) is not None):
+        elif (
+            re.match(f'^{date_re} {time_re}$', options.fromtime.strip('"'))
+            is not None
+        ):
             fromtime = options.fromtime.strip('"')
         else:
             dsz.ui.Echo('Invalid fromtime', dsz.ERROR)
             parser.print_help()
             sys.exit(1)
-    elif (options.centeredtime is not None):
+    elif options.centeredtime is not None:
         date_re = '((1[0-9]|2[0-9])\\d\\d)-(0[1-9]|1[0-2])-([0-2][0-9]|3[0-2])'
         time_re = '(2[0-3]|[0-1][0-9]):([0-5][0-9]):([0-5][0-9])'
-        if (re.match(('^%s$' % date_re), options.centeredtime.strip('"')) is not None):
+        if (
+            re.match(f'^{date_re}$', options.centeredtime.strip('"'))
+            is not None
+        ):
             fromtime = _getcenteredword(options.age, ('%s 00:00:00' % options.centeredtime.strip('"')))
             age = ops.timehelper.get_age_from_seconds((ops.timehelper.get_seconds_from_age(options.age) * 2))
-        elif (re.match(('^%s %s$' % (date_re, time_re)), options.centeredtime.strip('"')) is not None):
+        elif (
+            re.match(f'^{date_re} {time_re}$', options.centeredtime.strip('"'))
+            is not None
+        ):
             fromtime = _getcenteredword(options.age, options.centeredtime.strip('"'))
             age = ops.timehelper.get_age_from_seconds((ops.timehelper.get_seconds_from_age(options.age) * 2))
         else:

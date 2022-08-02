@@ -6,7 +6,7 @@ import datetime
 class TimeData(DszObject, ):
 
     def __init__(self, dszpath='', cmdid=None, opsclass=None, parent=None, debug=False):
-        DszObject.__init__(self, dszpath, cmdid, (opsclass if opsclass else dsztime), parent, debug)
+        DszObject.__init__(self, dszpath, cmdid, opsclass or dsztime, parent, debug)
         self.__friendlyGMTTime = None
         self.__friendlyLocalTime = None
         self.__friendlyBias = None

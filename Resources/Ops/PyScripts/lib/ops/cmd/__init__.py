@@ -9,9 +9,9 @@ import ops.env
 from ops.cmd.safetychecks import doSafetyHandlers
 import util
 import util.ip
-command_classes = dict()
-aliasoptions = dict()
-aliashelps = dict()
+command_classes = {}
+aliasoptions = {}
+aliashelps = {}
 DSZ_PREFIXES = ['async', 'background', 'foreground', 'disablewow64', 'dst', 'guiflag', 'local', 'log', 'monitor', 'nocharescapes', 'notify', 'src', 'stopaliasing', 'task', 'user', 'wait', 'xml']
 DSZ_ARG_PREFIXES = ['dst', 'src', 'task', 'user']
 NEVER_PRELOAD = ['script', 'python', 'wrappers']
@@ -22,25 +22,23 @@ def quickrun(command_string, dszquiet=True, norecord=False):
 CURRENT_USER = ops.env.get('_USER', cmdid=ops.env.SELF)
 
 def getDszCommand(command_string, dszquiet=True, norecord=False, arglist=None, prefixes=None, **options):
-    if (prefixes == None):
-        prefixes = list()
-    if (arglist == None):
-        arglist = list()
-    if ((command_string.strip().find(' ') > (-1)) and (len(options) > 0)):
+    if prefixes is None:
+        prefixes = []
+    if arglist is None:
+        arglist = []
+    if command_string.strip().find(' ') > (-1) and options:
         raise OpsCommandException('You cannot both specify options and provide an entire command string.')
     elif (command_string.strip().find(' ') > (-1)):
         (prefixes, plugin, arglist, optdict) = parseCommand(command_string)
     else:
         plugin = command_string
-        optdict = dict()
-        for opt in options:
-            optdict[opt] = options[opt]
+        optdict = {opt: options[opt] for opt in options}
     comObj = None
     try:
         if (plugin[0] == '.'):
             raise OpsCommandException('You cannot issue commands that begin with "." with ops.cmd or dsz.cmd')
         if (plugin not in command_classes):
-            __import__(('ops.cmd.%s' % plugin))
+            __import__(f'ops.cmd.{plugin}')
         comObj = command_classes[plugin](plugin=plugin, arglist=arglist, dszquiet=dszquiet, prefixes=prefixes, norecord=norecord, **optdict)
     except (KeyError, ImportError):
         comObj = DszCommand(plugin=plugin, arglist=arglist, dszquiet=dszquiet, prefixes=prefixes, norecord=norecord, **optdict)
@@ -52,7 +50,7 @@ def parseCommand(command_string):
     arglist = []
     optdict = {}
     plugin = ''
-    while ((plugin == '') and (len(tokens) > 0)):
+    while not plugin and len(tokens) > 0:
         token = tokens.pop(0)
         if (len(filter((lambda x: ((token.find(x) == 0) and ((x != 'user') and (token != 'users')))), DSZ_PREFIXES)) > 0):
             prefixes.append(token)
@@ -67,26 +65,20 @@ def parseCommand(command_string):
             arglist.append(token)
     while (len(tokens) > 0):
         optname = tokens.pop(0)[1:]
-        optval = ''
         if (len(tokens) > 0):
             token = tokens.pop(0)
+            optval = ''
             while ((token[0] != '-') and (len(tokens) > 0)):
-                optval += (' ' + token)
+                optval += f' {token}'
                 token = tokens.pop(0)
             if (len(tokens) == 0):
                 if (token[0] == '-'):
                     tokens.insert(0, token)
                 else:
-                    optval += (' ' + token)
-                if (len(optval) > 0):
-                    optdict[optname] = optval[1:]
-                else:
-                    optdict[optname] = True
+                    optval += f' {token}'
+                optdict[optname] = optval[1:] if (len(optval) > 0) else True
             else:
-                if (len(optval) > 0):
-                    optdict[optname] = optval[1:]
-                else:
-                    optdict[optname] = True
+                optdict[optname] = optval[1:] if (len(optval) > 0) else True
                 tokens.insert(0, token)
         else:
             optdict[optname] = True
@@ -114,11 +106,11 @@ class DszCommand(Command, ):
             self.optdict = optdict
         self.dszquiet = dszquiet
         self.override = override
-        if (not ('background' in self.prefixes)):
+        if 'background' not in self.prefixes:
             self.dszbackground = dszbackground
-        if (not ('monitor' in self.prefixes)):
+        if 'monitor' not in self.prefixes:
             self.dszmonitor = dszmonitor
-        if (not ('log' in self.prefixes)):
+        if 'log' not in self.prefixes:
             self.dszlog = dszlog
         if (self.dszuser is None):
             self.dszuser = dszuser
@@ -126,7 +118,7 @@ class DszCommand(Command, ):
         self.__success = None
         self.__result = None
         try:
-            __import__(('ops.override.%s' % plugin))
+            __import__(f'ops.override.{plugin}')
             if ('stopaliasing' not in self.prefixes):
                 self.prefixes.append('stopaliasing')
         except ImportError:
@@ -147,28 +139,27 @@ class DszCommand(Command, ):
         (issafe, safetymsg) = self.safetyCheck()
         if issafe:
             return self._actual_execute()
-        else:
-            ops.error('Scripted command safety check failed!')
-            ops.error(('Command: %s' % str(self)))
-            ops.error(('Failure: %s' % safetymsg))
-            if self.override:
-                override_run = dsz.ui.Prompt('Your command did not pass the safety check, do you still want to run it?', False)
-                if override_run:
-                    return self._actual_execute()
-            ops.error('The command will not be run')
+        ops.error('Scripted command safety check failed!')
+        ops.error(f'Command: {str(self)}')
+        ops.error(f'Failure: {safetymsg}')
+        if self.override:
+            if override_run := dsz.ui.Prompt(
+                'Your command did not pass the safety check, do you still want to run it?',
+                False,
+            ):
+                return self._actual_execute()
+        ops.error('The command will not be run')
 
     def _actual_execute(self):
         if self.dszquiet:
             x = dsz.control.Method()
             dsz.control.echo.Off()
         cmdstr = str(self)
-        if (ops.env.get(('OPS_SAFE_%s' % self.plugin)) is not None):
-            cmdstr = ('stopaliasing ' + cmdstr)
+        if ops.env.get(f'OPS_SAFE_{self.plugin}') is not None:
+            cmdstr = f'stopaliasing {cmdstr}'
         if ((not self.dszquiet) and (self.plugin not in NEVER_PRELOAD)):
             ops.preload(self.plugin)
-        dszflag = dsz.RUN_FLAG_RECORD
-        if self.norecord:
-            dszflag = 0
+        dszflag = 0 if self.norecord else dsz.RUN_FLAG_RECORD
         timestamp = datetime.datetime.now()
         (success, cmdid) = dsz.cmd.RunEx(cmdstr, dszflag)
         self.__success = success
@@ -190,25 +181,23 @@ class DszCommand(Command, ):
             dsz.cmd.Run(('stop %d' % self.channel))
 
     def __str__(self):
-        cmdstr = ''
-        for prefix in self.prefixes:
-            cmdstr += ('%s ' % prefix)
-        cmdstr += ('%s ' % self.plugin)
+        cmdstr = ''.join(f'{prefix} ' for prefix in self.prefixes)
+        cmdstr += f'{self.plugin} '
         for arg in self.arglist:
-            cmdstr += ('%s ' % arg)
+            cmdstr += f'{arg} '
         for optkey in self.optdict:
             if (type(self.optdict[optkey]) == bool):
                 if (self.optdict[optkey] == True):
-                    cmdstr += ('-%s ' % optkey)
-            elif (self.optdict[optkey] is not None):
-                cmdstr += ('-%s %s ' % (optkey, self.optdict[optkey]))
+                    cmdstr += f'-{optkey} '
+            elif self.optdict[optkey] is not None:
+                cmdstr += f'-{optkey} {self.optdict[optkey]} '
         return ops.utf8(cmdstr)
 
     def _getBackground(self):
         return ('background' in self.prefixes)
 
     def _setBackground(self, val):
-        if (val and (not ('background' in self.prefixes))):
+        if val and 'background' not in self.prefixes:
             self.prefixes.append('background')
         elif ((not val) and ('background' in self.prefixes)):
             self.prefixes.remove('background')
@@ -218,7 +207,7 @@ class DszCommand(Command, ):
         return ('monitor' in self.prefixes)
 
     def _setmonitor(self, val):
-        if (val and (not ('monitor' in self.prefixes))):
+        if val and 'monitor' not in self.prefixes:
             self.prefixes.append('monitor')
         elif ((not val) and ('monitor' in self.prefixes)):
             self.prefixes.remove('monitor')
@@ -229,8 +218,7 @@ class DszCommand(Command, ):
             if (prefix.find('user') == 0):
                 splits = prefix.split('=')
                 return splits[1]
-        else:
-            return None
+        return None
 
     def _setuser(self, value):
         for prefix in self.prefixes:
@@ -238,14 +226,14 @@ class DszCommand(Command, ):
                 self.prefixes.remove(prefix)
         if (value is None):
             return
-        self.prefixes.append(('user=%s' % value))
+        self.prefixes.append(f'user={value}')
     dszuser = property(_getuser, _setuser)
 
     def _getlog(self):
         return ('log' in self.prefixes)
 
     def _setlog(self, val):
-        if (val and (not ('log' in self.prefixes))):
+        if val and 'log' not in self.prefixes:
             self.prefixes.append('log')
         elif ((not val) and ('log' in self.prefixes)):
             self.prefixes.remove('log')
@@ -256,8 +244,7 @@ class DszCommand(Command, ):
             if (prefix.find('dst=') == 0):
                 splits = prefix.split('=')
                 return splits[1]
-        else:
-            return None
+        return None
 
     def _setdst(self, value):
         for prefix in self.prefixes:
@@ -265,7 +252,7 @@ class DszCommand(Command, ):
                 self.prefixes.remove(prefix)
         if (value is None):
             return
-        self.prefixes.append(('dst=%s' % value))
+        self.prefixes.append(f'dst={value}')
     dszdst = property(_getdst, _setdst)
 
     def _getResult(self):
@@ -293,10 +280,7 @@ def getBoolOption(obj, optname):
     return ((optname in obj.optdict) and obj.optdict[optname])
 
 def getValueOption(obj, optname):
-    if (optname in obj.optdict):
-        return obj.optdict[optname]
-    else:
-        return None
+    return obj.optdict[optname] if (optname in obj.optdict) else None
 
 def setBoolOption(obj, val, optname):
     if ((optname in obj.optdict) and ((val is None) or (val is False))):
@@ -307,26 +291,28 @@ def setBoolOption(obj, val, optname):
 def setListOption(obj, val, optname, valid):
     if ((val is None) and (optname in obj.optdict)):
         del obj.optdict[optname]
-    elif (val is not None):
+    elif val is not None:
         if (val in valid):
             obj.optdict[optname] = val
         else:
-            raise OpsCommandException(('Invalid value for option -%s: %s' % (optname, val)))
+            raise OpsCommandException(f'Invalid value for option -{optname}: {val}')
 
 def setIntOption(obj, val, optname):
     if ((val is None) and (optname in obj.optdict)):
         del obj.optdict[optname]
-    elif (val is not None):
+    elif val is not None:
         try:
             intval = int(val)
             obj.optdict[optname] = intval
         except:
-            raise OpsCommandException(('%s is required to be an int, you gave %s' % (optname, val)))
+            raise OpsCommandException(
+                f'{optname} is required to be an int, you gave {val}'
+            )
 
 def setStringOption(obj, val, optname):
     if ((val is None) and (optname in obj.optdict)):
         del obj.optdict[optname]
-    elif (val is not None):
+    elif val is not None:
         try:
             strval = (val.encode('utf8') if (unicode is type(val)) else str(val))
             strval = strval.replace('"', '\\"')
@@ -334,32 +320,38 @@ def setStringOption(obj, val, optname):
                 strval = (('"' + strval) + '"')
             obj.optdict[optname] = strval
         except Exception as e:
-            raise OpsCommandException(('%s is required to be a string, but what you provided could not be converted to a string. Reason: %s' % (optname, e)))
+            raise OpsCommandException(
+                f'{optname} is required to be a string, but what you provided could not be converted to a string. Reason: {e}'
+            )
 
 def setIpOption(obj, val, optname):
     if ((val is None) and (optname in obj.optdict)):
         del obj.optdict[optname]
-    elif (val is not None):
+    elif val is not None:
         if util.ip.validate(val):
             obj.optdict[optname] = val
         else:
-            raise OpsCommandException(('%s is required to be a valid IP address, you gave %s' % (optname, val)))
+            raise OpsCommandException(
+                f'{optname} is required to be a valid IP address, you gave {val}'
+            )
 
 def setPortOption(obj, val, optname):
     if ((val is None) and (optname in obj.optdict)):
         del obj.optdict[optname]
-    elif (val is not None):
+    elif val is not None:
         try:
             intval = int(val)
             if ((intval < 0) or (intval > 65535)):
                 raise OpsCommandException(('Invalid port, port must be between 0 and 65535, you gave %d' % intval))
         except:
-            raise OpsCommandException(('%s is required to be a valid port, you gave %s' % (optname, val)))
+            raise OpsCommandException(
+                f'{optname} is required to be a valid port, you gave {val}'
+            )
 
 def get_filtered_command_list(cpaddrs=[], isrunning=None, goodwords=[], badwords=[]):
     base = 'commandmetadata'
     i = 0
-    retval = list()
+    retval = []
     while True:
         i += 1
         good = True
@@ -368,10 +360,12 @@ def get_filtered_command_list(cpaddrs=[], isrunning=None, goodwords=[], badwords
         except:
             break
         try:
-            if (isrunning is not None):
-                if (dsz.cmd.data.ObjectGet(base, 'isrunning', dsz.TYPE_BOOL, i)[0] != isrunning):
-                    good = False
-                    continue
+            if (isrunning is not None) and (
+                dsz.cmd.data.ObjectGet(base, 'isrunning', dsz.TYPE_BOOL, i)[0]
+                != isrunning
+            ):
+                good = False
+                continue
             try:
                 dest = dsz.cmd.data.ObjectGet(base, 'destination', dsz.TYPE_STRING, i)[0]
                 if ((cpaddrs != []) and (dest not in cpaddrs)):

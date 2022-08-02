@@ -20,9 +20,7 @@ class RegistryKeyData(DszObject, ):
 
     def _makekeyvaldict(self):
         if (self._quickdict is None):
-            self._quickdict = dict()
-            for subkey in self.subkey:
-                self._quickdict[subkey.name.lower()] = subkey
+            self._quickdict = {subkey.name.lower(): subkey for subkey in self.subkey}
             for valval in self.value:
                 self._quickdict[valval.name.lower()] = valval
 
@@ -35,7 +33,9 @@ class RegistryKeyData(DszObject, ):
         key = key.lower()
         if (key in self._quickdict):
             return self._quickdict[key]
-        raise KeyError(('There is no subkey or value named %s in the registry key %s' % (key, self.name)))
+        raise KeyError(
+            f'There is no subkey or value named {key} in the registry key {self.name}'
+        )
 
 class RegistryQueryCommandData(DszCommandObject, ):
 

@@ -78,7 +78,6 @@ def main(args):
                 
 
 #------------------------------------------------------------------------------------------
-if __name__ == '__main__':
-	if (main(sys.argv) != True):
-		sys.exit(-1)
+if __name__ == '__main__' and (main(sys.argv) != True):
+    sys.exit(-1)
 		

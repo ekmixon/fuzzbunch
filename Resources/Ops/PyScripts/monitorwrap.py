@@ -19,7 +19,7 @@ if (__name__ == '__main__'):
     (safe, safetymsg) = cmd.safetyCheck()
     if (not safe):
         ops.error('Command safety check failed!')
-        ops.error(('Failure: %s' % safetymsg))
+        ops.error(f'Failure: {safetymsg}')
         if options.override:
             ops.warn('Someone chose to override this safety check, so this monitor will still be run.  I hope they knew what they were doing')
         else:

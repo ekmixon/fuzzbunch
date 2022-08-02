@@ -5,15 +5,8 @@ import sys
 
 # determine the absolute path to the disk
 scriptDir = os.path.dirname(os.path.realpath(sys.argv[0]))
-print "%s" % scriptDir
-
+import os
 args = ""
-i = 1
-while (i < len(sys.argv)):
-	if (len(args)):
-		args = "%s %s" % (args, sys.argv[i])
-	else:
-		args = sys.argv[1]
-	i = i + 1
-	
-sys.exit(os.system("python %s/configure_lp.py -load %s" % (scriptDir, args)))
+for i in range(1, len(sys.argv)):
+	args = f"{args} {sys.argv[i]}" if (len(args)) else sys.argv[1]
+sys.exit(os.system(f"python {scriptDir}/configure_lp.py -load {args}"))

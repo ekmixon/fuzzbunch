@@ -9,13 +9,7 @@ from ops.pprint import pprint
 def main():
     connection_list = []
     proc_list = []
-    ppid = ''
-    path = ''
-    user = ''
-    if (len(sys.argv) > 1):
-        pattern = (('.*' + sys.argv[1]) + '.*')
-    else:
-        pattern = '.*'
+    pattern = f'.*{sys.argv[1]}.*' if (len(sys.argv) > 1) else '.*'
     print (('\nFiltering connections with regex:: ' + pattern) + '\n')
     regex = re.compile(pattern, (re.I | re.UNICODE))
     dsz.control.echo.Off()
@@ -23,6 +17,9 @@ def main():
     conn_items = cmd.execute()
     if cmd.success:
         proc_list = getProcList()
+        ppid = ''
+        path = ''
+        user = ''
         for conn_item in conn_items.initialconnectionlistitem.connectionitem:
             type = conn_item.type.encode('utf-8')
             pid = str(conn_item.pid)
@@ -35,12 +32,14 @@ def main():
             local_port = str(conn_item.local.port)
             local_address = str(conn_item.local.address)
             print_local_address = ''
-            if ((len(local_address) > 0) and (local_address != 'None')):
-                print_local_address = ((local_address + ':') + local_port)
-            else:
-                print_local_address = '*.*'
-            if ((len(remote_address) > 0) and (remote_address != 'None')):
-                print_remote_address = ((remote_address + ':') + remote_port)
+            print_local_address = (
+                f'{local_address}:{local_port}'
+                if local_address not in ["", 'None']
+                else '*.*'
+            )
+
+            if remote_address not in ["", 'None']:
+                print_remote_address = f'{remote_address}:{remote_port}'
             else:
                 print_remote_address = '*.*'
             connection = [type, print_local_address, print_remote_address, state, pid, ppid, path, user]

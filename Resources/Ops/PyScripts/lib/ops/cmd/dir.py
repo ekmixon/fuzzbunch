@@ -13,7 +13,7 @@ class DirCommand(ops.cmd.DszCommand, ):
             self.arglist = []
             if ((tail.find('"') > (-1)) or (tail.find("'") > (-1))):
                 tail = tail[:(-1)]
-            if ((head[0] == '"') or (head[0] == "'")):
+            if head[0] in ['"', "'"]:
                 head = head[1:]
             if (head.find(' ') > (-1)):
                 head = ('"%s"' % head)
@@ -38,10 +38,7 @@ class DirCommand(ops.cmd.DszCommand, ):
         return True
 
     def _getMask(self):
-        if ('mask' in self.optdict):
-            return self.optdict['mask']
-        else:
-            return '*'
+        return self.optdict['mask'] if ('mask' in self.optdict) else '*'
 
     def _setMask(self, val):
         val = val.strip()
@@ -52,10 +49,7 @@ class DirCommand(ops.cmd.DszCommand, ):
     mask = property(_getMask, _setMask)
 
     def _getPath(self):
-        if ('path' in self.optdict):
-            return self.optdict['path']
-        else:
-            return None
+        return self.optdict['path'] if ('path' in self.optdict) else None
 
     def _setPath(self, val):
         val = val.strip()
@@ -70,10 +64,7 @@ class DirCommand(ops.cmd.DszCommand, ):
     path = property(_getPath, _setPath)
 
     def _getRecursive(self):
-        if ('recursive' in self.optdict):
-            return True
-        else:
-            return False
+        return 'recursive' in self.optdict
 
     def _setRecursive(self, val):
         if val:
@@ -83,10 +74,7 @@ class DirCommand(ops.cmd.DszCommand, ):
     recursive = property(_getRecursive, _setRecursive)
 
     def _getDirsonly(self):
-        if ('dirsonly' in self.optdict):
-            return True
-        else:
-            return False
+        return 'dirsonly' in self.optdict
 
     def _setDirsonly(self, val):
         if val:
@@ -96,10 +84,7 @@ class DirCommand(ops.cmd.DszCommand, ):
     dirsonly = property(_getDirsonly, _setDirsonly)
 
     def _getTime(self):
-        if ('time' in self.optdict):
-            return self.optdict['time']
-        else:
-            return 'modified'
+        return self.optdict['time'] if ('time' in self.optdict) else 'modified'
 
     def _setTime(self, val):
         if (val in ['modified', 'created', 'accessed']):
@@ -111,10 +96,7 @@ class DirCommand(ops.cmd.DszCommand, ):
     time = property(_getTime, _setTime)
 
     def _getAge(self):
-        if ('age' in self.optdict):
-            return self.optdict['age']
-        else:
-            return None
+        return self.optdict['age'] if ('age' in self.optdict) else None
 
     def _setAge(self, val):
         if ((val is not None) and (val != '')):
@@ -127,10 +109,7 @@ class DirCommand(ops.cmd.DszCommand, ):
     age = property(_getAge, _setAge)
 
     def _getAfter(self):
-        if ('after' in self.optdict):
-            return self.optdict['after']
-        else:
-            return None
+        return self.optdict['after'] if ('after' in self.optdict) else None
 
     def _setAfter(self, val):
         if ((val is not None) and (val != '')):
@@ -144,10 +123,7 @@ class DirCommand(ops.cmd.DszCommand, ):
     after = property(_getAfter, _setAfter)
 
     def _getBefore(self):
-        if ('before' in self.optdict):
-            return self.optdict['before']
-        else:
-            return None
+        return self.optdict['before'] if ('before' in self.optdict) else None
 
     def _setBefore(self, val):
         if ((val is not None) and (val != '')):
@@ -161,10 +137,7 @@ class DirCommand(ops.cmd.DszCommand, ):
     before = property(_getBefore, _setBefore)
 
     def _getMax(self):
-        if ('max' in self.optdict):
-            return self.optdict['max']
-        else:
-            return None
+        return self.optdict['max'] if ('max' in self.optdict) else None
 
     def _setMax(self, val):
         if (val is not None):
@@ -178,10 +151,7 @@ class DirCommand(ops.cmd.DszCommand, ):
     max = property(_getMax, _setMax)
 
     def _getHash(self):
-        if ('hash' in self.optdict):
-            return self.optdict['hash']
-        else:
-            return None
+        return self.optdict['hash'] if ('hash' in self.optdict) else None
 
     def _setHash(self, val):
         if (val is not None):
@@ -191,10 +161,7 @@ class DirCommand(ops.cmd.DszCommand, ):
     hash = property(_getHash, _setHash)
 
     def _getChunksize(self):
-        if ('chunksize' in self.optdict):
-            return self.optdict['chunksize']
-        else:
-            return None
+        return self.optdict['chunksize'] if ('chunksize' in self.optdict) else None
 
     def _setChunksize(self, val):
         if (val is not None):

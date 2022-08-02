@@ -9,10 +9,7 @@ from ops.pprint import pprint
 
 def main():
     process_list = []
-    if (len(sys.argv) > 1):
-        pattern = (('.*' + sys.argv[1]) + '.*')
-    else:
-        pattern = '.*'
+    pattern = f'.*{sys.argv[1]}.*' if (len(sys.argv) > 1) else '.*'
     print (('\nFiltering processes with regex:: ' + pattern) + '\n')
     regex = re.compile(pattern, (re.I | re.UNICODE))
     dsz.control.echo.Off()

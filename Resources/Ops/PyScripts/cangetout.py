@@ -46,7 +46,7 @@ class canGetOut:
         if ((choice <= 0) or (choice > len(addrlist))):
             dsz.ui.Echo('Invalid choice', dsz.ERROR)
         else:
-            dsz.ui.Echo(('You chose: %s' % addrlist[(choice - 1)]))
+            dsz.ui.Echo(f'You chose: {addrlist[choice - 1]}')
             self.domain = addrlist[(choice - 1)]
             self.ip = self.nslookup(addrlist[(choice - 1)])
 
@@ -60,7 +60,7 @@ class canGetOut:
             dsz.ui.Echo('\tError getting dns servers', dsz.ERROR)
 
     def nslookup(self, name):
-        cmd = ops.cmd.getDszCommand(('nameserverlookup %s' % name), dszquiet=True)
+        cmd = ops.cmd.getDszCommand(f'nameserverlookup {name}', dszquiet=True)
         obj = cmd.execute()
         if (not cmd.success):
             dsz.ui.Echo('\tError: Unable to complete remote nslookup', dsz.ERROR)
@@ -106,7 +106,7 @@ class canGetOut:
     def getOut(self):
         cmd = ops.cmd.getDszCommand('banner')
         if (self.proxy_ip and self.proxy_port):
-            dsz.ui.Echo(('Proxy: %s:%s' % (self.proxy_ip, self.proxy_port)))
+            dsz.ui.Echo(f'Proxy: {self.proxy_ip}:{self.proxy_port}')
             choice = dsz.ui.Prompt('It appears a proxy is set.  Banner with proxy settings?')
             if (choice == 1):
                 cmd = ops.cmd.getDszCommand('banner')

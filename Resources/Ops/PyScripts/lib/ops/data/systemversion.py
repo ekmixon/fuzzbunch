@@ -11,32 +11,40 @@ class SystemVersionData(DszObject, ):
     @property
     def friendlyplatform(self):
         if (self._friendlyplatform is None):
-            if (self.major == 5):
-                if (self.minor == 0):
-                    self._friendlyplatform = 'Windows 2000'
-                elif (self.minor == 1):
+            if self.major == 5:
+                if (
+                    self.minor != 0
+                    and self.minor != 1
+                    and self.minor == 2
+                    and self.flags.workstation
+                    or self.minor != 0
+                    and self.minor == 1
+                ):
                     self._friendlyplatform = 'Windows XP'
-                elif (self.minor == 2):
-                    if self.flags.workstation:
-                        self._friendlyplatform = 'Windows XP'
-                    else:
-                        self._friendlyplatform = 'Windows 2003'
-            elif (self.major == 6):
-                if (self.minor == 0):
-                    if self.flags.workstation:
-                        self._friendlyplatform = 'Windows Vista'
-                    else:
-                        self._friendlyplatform = 'Windows 2008'
-                elif (self.minor == 1):
-                    if self.flags.workstation:
-                        self._friendlyplatform = 'Windows 7'
-                    else:
-                        self._friendlyplatform = 'Windows 2008 R2'
-                elif (self.minor == 2):
-                    if self.flags.workstation:
-                        self._friendlyplatform = 'Windows 8'
-                    else:
-                        self._friendlyplatform = 'Windows 2012'
+                elif self.minor != 0 and self.minor == 2:
+                    self._friendlyplatform = 'Windows 2003'
+                elif self.minor == 0:
+                    self._friendlyplatform = 'Windows 2000'
+            elif self.major == 6:
+                if self.minor == 0:
+                    self._friendlyplatform = (
+                        'Windows Vista'
+                        if self.flags.workstation
+                        else 'Windows 2008'
+                    )
+
+                elif self.minor == 1:
+                    self._friendlyplatform = (
+                        'Windows 7'
+                        if self.flags.workstation
+                        else 'Windows 2008 R2'
+                    )
+
+                elif self.minor == 2:
+                    self._friendlyplatform = (
+                        'Windows 8' if self.flags.workstation else 'Windows 2012'
+                    )
+
             assert (self._friendlyplatform is not None), 'Could not determine friendly name of platform; must be Windows Super Special Awesome, which is unsupported.'
         return self._friendlyplatform
 if ('systemversion' not in cmd_definitions):

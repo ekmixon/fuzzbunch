@@ -14,4 +14,10 @@ def get_drivelist(maxage=datetime.timedelta(seconds=0), targetID=None):
 
 def get_diskspace(drive, maxage=datetime.timedelta(seconds=0), targetID=None):
     diskspace_cmd = ops.cmd.getDszCommand(('diskspace %s:\\' % drive))
-    return ops.project.generic_cache_get(diskspace_cmd, cache_tag=('%s%s' % (DISKSPACE_TAG_BASE, drive.upper())), cache_size=MAX_DRIVESPACE_CACHE_SIZE, maxage=maxage, targetID=targetID).drive[0]
+    return ops.project.generic_cache_get(
+        diskspace_cmd,
+        cache_tag=f'{DISKSPACE_TAG_BASE}{drive.upper()}',
+        cache_size=MAX_DRIVESPACE_CACHE_SIZE,
+        maxage=maxage,
+        targetID=targetID,
+    ).drive[0]

@@ -47,8 +47,14 @@ def get_core_candidates(pathtocheck):
     cmd = ops.cmd.getDszCommand('dir', path=('"%s"' % os.path.dirname(pathtocheck)), mask=('"%s"' % os.path.basename(pathtocheck)))
     obj = cmd.execute()
     if cmd.success:
-        candidates = [f for d in obj.diritem for f in d.fileitem if (f.attributes.directory == 0) if (f.size in CODE_CORE_KNOWN_SIZES)]
-        return candidates
+        return [
+            f
+            for d in obj.diritem
+            for f in d.fileitem
+            if (f.attributes.directory == 0)
+            if (f.size in CODE_CORE_KNOWN_SIZES)
+        ]
+
     return []
 
 def regquery_single(hive, key, value):
@@ -68,7 +74,11 @@ def check_code_reg():
         dsz.ui.Echo('InProcServer32 key not found', dsz.ERROR)
         return None
     else:
-        dsz.ui.Echo(('InProcServer32 key found [%s %s]' % (value['updatedate'], value['updatetime'])), dsz.GOOD)
+        dsz.ui.Echo(
+            f"InProcServer32 key found [{value['updatedate']} {value['updatetime']}]",
+            dsz.GOOD,
+        )
+
         pathtocheck = value['data']
         if (os.path.basename(pathtocheck) == CODE_REG_DATA_EXPECTED):
             dsz.ui.Echo('Registry key contains default value', dsz.ERROR)
@@ -93,10 +103,14 @@ def main():
         dsz.ui.Echo('Checking for location of bootstrap on disk')
         file_times = getdirinfo(path_to_check)
         if (file_times is None):
-            dsz.ui.Echo(('Could not find %s' % path_to_check), dsz.ERROR)
+            dsz.ui.Echo(f'Could not find {path_to_check}', dsz.ERROR)
         else:
             found_bootstrap = True
-            dsz.ui.Echo(('Found %s [a:%s, c:%s, m:%s]' % (path_to_check, file_times[0], file_times[1], file_times[2])), dsz.GOOD)
+            dsz.ui.Echo(
+                f'Found {path_to_check} [a:{file_times[0]}, c:{file_times[1]}, m:{file_times[2]}]',
+                dsz.GOOD,
+            )
+
     dsz.ui.Echo('')
     dsz.ui.Echo('Checking for location of core on disk')
     candidates = []
@@ -111,7 +125,11 @@ def main():
         dsz.ui.Echo('Found possible candidates for CODE core', dsz.GOOD)
         for f in candidates:
             ft = f.filetimes
-            dsz.ui.Echo(('%s [a:%s, c:%s, m:%s]' % (f.fullpath, ft.accessed.time, ft.created.time, ft.modified.time)), dsz.GOOD)
+            dsz.ui.Echo(
+                f'{f.fullpath} [a:{ft.accessed.time}, c:{ft.created.time}, m:{ft.modified.time}]',
+                dsz.GOOD,
+            )
+
             dsz.ui.Echo(('    Size: %d (v: %s)' % (f.size, CODE_CORE_KNOWN_SIZES[f.size])), dsz.GOOD)
     dsz.ui.Echo('')
     if (found_bootstrap and candidates):

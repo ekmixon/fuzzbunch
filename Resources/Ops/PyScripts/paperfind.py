@@ -19,7 +19,7 @@ def main():
     handles_group.add_argument('--memory', dest='memory', type=int10or16, help='Number of bytes to use for open handle list (defaults to handles default).')
     options = parser.parse_args()
     if options.regex:
-        ops.info(('Searching using regex: %s' % options.pattern))
+        ops.info(f'Searching using regex: {options.pattern}')
     else:
         ops.info(('Searching for "%s"...' % options.pattern))
     found = ops.system.handles.grep_handles(pattern=ntpath.normpath(options.pattern), id=options.id, all=options.all, memory=options.memory, regex=options.regex, any=options.any, maxage=options.data_age)

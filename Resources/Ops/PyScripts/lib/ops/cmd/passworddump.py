@@ -22,9 +22,7 @@ class PasswordDumpCommand(ops.cmd.DszCommand, ):
                     return False
             if optval:
                 truecount += 1
-        if (truecount > 1):
-            return False
-        return True
+        return truecount <= 1
 
 def mySafetyCheck(self):
     if (self.validateInput() and (ops.env.get('OPS_NOINJECT').upper() != 'TRUE')):

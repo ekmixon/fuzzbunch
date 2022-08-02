@@ -39,14 +39,11 @@ class OpsClass(OpsField, ):
 
 def _ensure_definition(cmdname):
     if (cmdname not in cmd_definitions):
-        if (cmdname in IMPORT_MAP):
-            impname = IMPORT_MAP[cmdname]
-        else:
-            impname = cmdname
+        impname = IMPORT_MAP[cmdname] if (cmdname in IMPORT_MAP) else cmdname
         try:
-            __import__(('ops.data.%s' % impname))
+            __import__(f'ops.data.{impname}')
         except ImportError:
-            raise ImportError(('Could not find a data format for your command %s' % cmdname))
+            raise ImportError(f'Could not find a data format for your command {cmdname}')
 
 def make_dsz_object_from_row(row):
     jdict = json.loads(row['data'])
@@ -56,10 +53,10 @@ def make_dsz_object_from_row(row):
     for key in ['id', 'name', 'screenlog', 'parentid', 'taskid', 'destination', 'source', 'isrunning', 'status', 'bytessent', 'bytesreceived', 'fullcommand']:
         metadata.__setattr__(key, row[key])
     for listkey in ['xmllog', 'prefix', 'argument']:
-        metadata.__setattr__(listkey, list())
+        metadata.__setattr__(listkey, [])
         for item in row[key].split(','):
             metadata.__getattribute__(listkey).append(item)
-    metadata.__setattr__('child', list())
+    metadata.__setattr__('child', [])
     for item in row['children'].split(','):
         if (item == ''):
             break
@@ -114,20 +111,31 @@ class DszObject(OpsObject, ):
             try:
                 if field.single:
                     if (field.dsztype == dsz.TYPE_OBJECT):
-                        self.__setattr__(fieldname, field.classobj(((dszpath + '::') + field.name), cmdid, field, self, debug, **kwargs))
+                        self.__setattr__(
+                            fieldname,
+                            field.classobj(
+                                f'{dszpath}::{field.name}',
+                                cmdid,
+                                field,
+                                self,
+                                debug,
+                                **kwargs,
+                            ),
+                        )
+
                     elif (field.dsztype == dsz.TYPE_STRING):
                         self.__setattr__(fieldname, unicode(dsz.cmd.data.ObjectGet(dszpath, field.name, field.dsztype, cmdid)[0], 'utf_8'))
                     elif (field.dsztype == dsz.TYPE_BOOL):
                         self.__setattr__(fieldname, bool(dsz.cmd.data.ObjectGet(dszpath, field.name, field.dsztype, cmdid)[0]))
                     else:
                         self.__setattr__(fieldname, dsz.cmd.data.ObjectGet(dszpath, field.name, field.dsztype, cmdid)[0])
-                elif (field.dsztype == dsz.TYPE_OBJECT):
+                elif field.dsztype == dsz.TYPE_OBJECT:
                     if (not hasattr(self, fieldname)):
-                        self.__setattr__(fieldname, list())
+                        self.__setattr__(fieldname, [])
                         start = 0
                     else:
                         start = len(self.__getattribute__(fieldname))
-                    for i in range(0, start):
+                    for i in range(start):
                         self.__getattribute__(fieldname)[i].update(('%s::%s[%d]' % (dszpath, field.name, i)))
                     for i in range(start, len(dsz.cmd.data.ObjectGet(dszpath, field.name, field.dsztype, cmdid))):
                         self.__getattribute__(fieldname).append(field.classobj(('%s::%s[%d]' % (dszpath, field.name, i)), cmdid, field, self, debug, **kwargs))
@@ -143,10 +151,7 @@ class DszObject(OpsObject, ):
                     traceback.print_exc(sys.exc_info())
 
     def __getcmdid(self):
-        if hasattr(self, '_cmdid'):
-            return self._cmdid
-        else:
-            return self.dszparent.cmdid
+        return self._cmdid if hasattr(self, '_cmdid') else self.dszparent.cmdid
 
     def __setcmdid(self, val):
         self._cmdid = val
@@ -166,9 +171,7 @@ class DszCommandObject(DszObject, ):
         self.dszparent = None
         if (cmdid is None):
             cmdid = dsz.cmd.data.ObjectGet('commandmetadata', 'id', dsz.TYPE_INT)[0]
-            self.cmdid = cmdid
-        else:
-            self.cmdid = cmdid
+        self.cmdid = cmdid
         if (cmdname is None):
             self.cmdname = dsz.cmd.data.ObjectGet('CommandMetadata', 'Name', dsz.TYPE_STRING, cmdid)[0]
         else:
@@ -183,7 +186,7 @@ class DszCommandObject(DszObject, ):
                     pass
         if (self.cmdname not in cmd_definitions):
             try:
-                exec ('import ops.data.%s' % self.cmdname)
+                exec(f'import ops.data.{self.cmdname}')
             except:
                 raise ImportError('Could not find a data format for your command')
         if (type(self) == DszCommandObject):
@@ -211,13 +214,13 @@ class DszCommandObject(DszObject, ):
                         self.__setattr__(fieldname, bool(dsz.cmd.data.Get(fieldname, field.dsztype, self.cmdid)[0]))
                     else:
                         self.__setattr__(fieldname, dsz.cmd.data.Get(fieldname, field.dsztype, self.cmdid)[0])
-                elif (field.dsztype == dsz.TYPE_OBJECT):
+                elif field.dsztype == dsz.TYPE_OBJECT:
                     if (not hasattr(self, fieldname)):
-                        self.__setattr__(fieldname, list())
+                        self.__setattr__(fieldname, [])
                         start = 0
                     else:
                         start = len(self.__getattribute__(fieldname))
-                    for i in range(0, start):
+                    for i in range(start):
                         self.__getattribute__(fieldname)[i].update(('%s[%d]' % (fieldname, i)))
                     for i in range(start, len(dsz.cmd.data.Get(fieldname, field.dsztype, self.cmdid))):
                         self.__getattribute__(fieldname).append(field.classobj(('%s[%d]' % (fieldname, i)), self.cmdid, field, self, debug, **kwargs))
@@ -244,10 +247,11 @@ class DszCommandMetaData(DszObject, ):
             self._friendlyerrors = getErrorFromCommandId(cmdid=self.id)
         return self._friendlyerrors
 cmd_metadata = OpsClass('commandmetadata', {'id': OpsField('id', dsz.TYPE_INT), 'name': OpsField('name', dsz.TYPE_STRING), 'xmllog': OpsField('xmllog', dsz.TYPE_STRING), 'screenlog': OpsField('screenlog', dsz.TYPE_STRING), 'parentid': OpsField('parentid', dsz.TYPE_INT), 'taskid': OpsField('taskid', dsz.TYPE_INT), 'destination': OpsField('destination', dsz.TYPE_STRING), 'source': OpsField('source', dsz.TYPE_STRING), 'isrunning': OpsField('isrunning', dsz.TYPE_BOOL), 'status': OpsField('status', dsz.TYPE_INT), 'bytessent': OpsField('bytessent', dsz.TYPE_INT), 'bytesreceived': OpsField('bytesreceived', dsz.TYPE_INT), 'fullcommand': OpsField('fullcommand', dsz.TYPE_STRING), 'prefix': OpsField('prefix', dsz.TYPE_STRING, single=False), 'argument': OpsField('argument', dsz.TYPE_STRING, single=False), 'child': OpsClass('child', {'id': OpsField('id', dsz.TYPE_INT)}, DszObject, single=False)}, DszCommandMetaData)
-cmd_definitions = {}
 null_data_commands = ['redirect', 'stop']
-for null_data in null_data_commands:
-    cmd_definitions[null_data] = OpsClass(null_data, {}, DszCommandObject)
+cmd_definitions = {
+    null_data: OpsClass(null_data, {}, DszCommandObject)
+    for null_data in null_data_commands
+}
 
 def register_null_command(cmdname):
     cmd_definitions[cmdname] = OpsClass(cmdname, {}, DszCommandObject)
@@ -262,14 +266,14 @@ def _cmd_data_json_encoder(dszobj):
     return retval
 
 def _dump_json(dszobj):
-    retval = dict()
+    retval = {}
     for fieldname in dszobj.opsclass.fields:
         field = dszobj.opsclass.fields[fieldname]
         if (field.dsztype == dsz.TYPE_OBJECT):
             if field.single:
                 retval[fieldname] = _dump_json(dszobj.__dict__[fieldname])
             else:
-                retval[fieldname] = list()
+                retval[fieldname] = []
                 for obj in dszobj.__dict__[fieldname]:
                     if (obj is None):
                         retval[fieldname] = None
@@ -285,10 +289,7 @@ def _load_cmd_json(bigdict, cmdname=''):
         return
     elif ('cmdname' in bigdict):
         cmdname = bigdict['cmdname']
-    if ('cmdid' in bigdict):
-        retval.cmdid = bigdict['cmdid']
-    else:
-        retval.cmdid = (-1)
+    retval.cmdid = bigdict['cmdid'] if ('cmdid' in bigdict) else -1
     _ensure_definition(cmdname)
     retval.opsclass = cmd_definitions[cmdname]
     retval.cmdname = cmdname
@@ -303,9 +304,11 @@ def _load_cmd_json(bigdict, cmdname=''):
                 else:
                     retval.__dict__[key] = _load_json(retval, field, bigdict[key])
             else:
-                retval.__dict__[key] = list()
-                for objstr in bigdict[key]:
-                    retval.__dict__[key].append(_load_json(retval, field, objstr))
+                retval.__dict__[key] = [
+                    _load_json(retval, field, objstr)
+                    for objstr in bigdict[key]
+                ]
+
         else:
             retval.__dict__[key] = bigdict[key]
     return retval
@@ -324,9 +327,11 @@ def _load_json(parent, opsclass, bigdict):
                 else:
                     retval.__dict__[key] = _load_json(retval, field, bigdict[key])
             else:
-                retval.__dict__[key] = list()
-                for objstr in bigdict[key]:
-                    retval.__dict__[key].append(_load_json(retval, field, objstr))
+                retval.__dict__[key] = [
+                    _load_json(retval, field, objstr)
+                    for objstr in bigdict[key]
+                ]
+
         else:
             retval.__dict__[key] = bigdict[key]
     return retval

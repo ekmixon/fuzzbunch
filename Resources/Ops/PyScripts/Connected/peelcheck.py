@@ -30,5 +30,5 @@ def main():
             return
     else:
         print 'Able to load audit plugin, NT_ELEVATION loaded correctly, moving on'
-if ((__name__ == '__main__') or (__name__ == ops.survey.PLUGIN)):
+if __name__ in ['__main__', ops.survey.PLUGIN]:
     main()

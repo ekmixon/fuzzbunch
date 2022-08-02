@@ -13,10 +13,7 @@ class CommandsCommand(ops.cmd.DszCommand, ):
         ops.cmd.DszCommand.__init__(self, plugin, **optdict)
 
     def validateInput(self):
-        for opt in self.optdict:
-            if (opt not in VALID_OPTIONS):
-                return False
-        return True
+        return all(opt in VALID_OPTIONS for opt in self.optdict)
     all = property((lambda x: getBoolOption(x, 'all')), (lambda x, y: setBoolOption(x, y, 'all')))
     any = property((lambda x: getBoolOption(x, 'any')), (lambda x, y: setBoolOption(x, y, 'any')))
     local = property((lambda x: getBoolOption(x, 'local')), (lambda x, y: setBoolOption(x, y, 'local')))

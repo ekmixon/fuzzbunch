@@ -12,7 +12,7 @@ from ops.survey.engine.bugcatcher import bugcatcher, wasCaught, userQuitScript
 
 def execute(config, sections=None, quiet=False):
     if (not os.path.exists(config)):
-        raise RuntimeError, ('%s not found.' % config)
+        raise (RuntimeError, f'{config} not found.')
     if (sections is None):
         sections = ops.survey.DEFAULT_SECTIONS
     ops.env.set('OPS_SIMPLE', False)
@@ -28,7 +28,7 @@ def execute(config, sections=None, quiet=False):
             ops.error('User quit script.')
             success = False
         else:
-            raise 
+            raise
     print()
     ops.env.set('OPS_SIMPLE', True)
     if (not quiet):
@@ -57,16 +57,16 @@ def main():
             ops.survey.override(options.override, options.sections)
         if options.exclude:
             if ops.survey.exclude(options.exclude):
-                ops.info(('%s added to exclusion list.' % options.exclude))
+                ops.info(f'{options.exclude} added to exclusion list.')
                 ops.survey.print_exclusion_list()
             else:
-                ops.info(('%s already in exclusion list.' % options.exclude))
+                ops.info(f'{options.exclude} already in exclusion list.')
         if options.include:
             if ops.survey.include(options.include):
-                ops.info(('%s removed from exclusion list.' % options.include))
+                ops.info(f'{options.include} removed from exclusion list.')
                 ops.survey.print_exclusion_list()
             else:
-                ops.info(('%s not in exclusion list.' % options.include))
+                ops.info(f'{options.include} not in exclusion list.')
         if options.printex:
             ops.survey.print_exclusion_list()
     else:

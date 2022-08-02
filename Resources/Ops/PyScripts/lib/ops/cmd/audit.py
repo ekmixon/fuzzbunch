@@ -19,21 +19,15 @@ class AuditCommand(ops.cmd.DszCommand, ):
         for opt in self.optdict:
             if (opt not in VALID_OPTIONS):
                 return False
-        optcounts = {}
-        for req in self.reqgroups:
-            optcounts[req] = 0
-            for opt in self.optgroups[req]:
-                if (opt in self.optdict):
-                    optcounts[req] += 1
-        if (optcounts['main'] != 1):
-            return False
-        return True
+        optcounts = {
+            req: sum(opt in self.optdict for opt in self.optgroups[req])
+            for req in self.reqgroups
+        }
+
+        return optcounts['main'] == 1
 
     def __getDisable(self):
-        if ('disable' in self.optdict):
-            return self.optdict['disable']
-        else:
-            return None
+        return self.optdict['disable'] if ('disable' in self.optdict) else None
 
     def __setDisable(self, val):
         if ((val is None) and ('disable' in self.optdict)):
@@ -41,7 +35,7 @@ class AuditCommand(ops.cmd.DszCommand, ):
         elif (val in ['all', 'security']):
             self.optdict['disable'] = val
         else:
-            raise OpsCommandException(('Invalid value for -disable: %s' % val))
+            raise OpsCommandException(f'Invalid value for -disable: {val}')
     disable = property(__getDisable, __setDisable)
 
     def __getForce(self):
@@ -96,7 +90,7 @@ def mySafetyCheck(self):
         good = False
         msgparts.append('Altering audit policy in a script is not safe, verify you really want to do that')
     msg = ''
-    if (len(msgparts) > 0):
+    if msgparts:
         msg = msgparts[0]
         for msgpart in msgparts[1:]:
             msg += ('\n\t' + msgpart)

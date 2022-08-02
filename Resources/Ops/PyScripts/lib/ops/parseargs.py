@@ -21,12 +21,15 @@ class ArgumentParser(argparse.ArgumentParser, ):
             args = sys.argv[1:]
         expected_args = []
         for action in self._optionals._actions:
-            for string in action.option_strings:
-                if string.startswith('--'):
-                    expected_args.append(string[1:])
-        for i in range(0, len(args)):
+            expected_args.extend(
+                string[1:]
+                for string in action.option_strings
+                if string.startswith('--')
+            )
+
+        for i in range(len(args)):
             if ((args[i] in expected_args) or (args[i] == '-')):
-                args[i] = ('-' + args[i])
+                args[i] = f'-{args[i]}'
         return argparse.ArgumentParser.parse_known_args(self, args=args, namespace=namespace, **kwargs)
 
     def format_help(self):

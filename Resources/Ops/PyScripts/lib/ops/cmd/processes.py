@@ -5,7 +5,7 @@ import util.ip
 class ProcessesCommand(ops.cmd.DszCommand, ):
 
     def __init__(self, plugin='processes', list=False, monitor=False, minimal=False, ignore=None, target=None, **optdict):
-        if (ignore == None):
+        if ignore is None:
             ignore = []
         self.list = list
         self.monitor = monitor
@@ -60,10 +60,8 @@ class ProcessesCommand(ops.cmd.DszCommand, ):
         return (self.list ^ bool(self.monitor))
 
     def __str__(self):
-        cmdstr = u''
-        for prefix in self.prefixes:
-            cmdstr += ('%s ' % prefix)
-        cmdstr += (self.plugin + ' ')
+        cmdstr = u''.join(f'{prefix} ' for prefix in self.prefixes)
+        cmdstr += f'{self.plugin} '
         if self.list:
             cmdstr += '-list '
         if self.monitor:
@@ -73,8 +71,8 @@ class ProcessesCommand(ops.cmd.DszCommand, ):
         if (self.ignore and (len(self.ignore) > 0)):
             cmdstr += '-ignore '
             for i in self.ignore:
-                cmdstr += (i + ' ')
+                cmdstr += f'{i} '
         if self.target:
-            cmdstr += ('-target %s ' % self.target)
+            cmdstr += f'-target {self.target} '
         return ops.utf8(cmdstr)
 ops.cmd.command_classes['processes'] = ProcessesCommand

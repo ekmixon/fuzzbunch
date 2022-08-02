@@ -19,9 +19,7 @@ def main(argv=None):
     conn = voldb.connection
     with conn:
         curs = conn.execute('SELECT mask,path FROM hashhunter WHERE cpaddr=?', [ops.TARGET_ADDR])
-    dir_list = []
-    for row in curs:
-        dir_list.append([row['mask'], row['path']])
+    dir_list = [[row['mask'], row['path']] for row in curs]
     completed = []
     for item in dir_list:
         if (item in completed):
@@ -29,10 +27,15 @@ def main(argv=None):
         dircmd = ops.cmd.getDszCommand('dir -hash sha1 -max 0')
         dircmd.mask = item[0]
         dircmd.path = item[1]
-        cache_tag = ('DRIVERLIST_DIRS_%s' % item[0].upper().split('.')[0])
+        cache_tag = f"DRIVERLIST_DIRS_{item[0].upper().split('.')[0]}"
         dirobj = ops.project.generic_cache_get(dircmd, cache_tag=cache_tag, cache_size=1, maxage=timedelta(seconds=maxage), targetID=None, use_volatile=True)
         completed.append(item)
-    ops.alert(('Hashhunter completed on %s!' % ops.project.getTarget().hostname), type=dsz.GOOD, stamp=None)
+    ops.alert(
+        f'Hashhunter completed on {ops.project.getTarget().hostname}!',
+        type=dsz.GOOD,
+        stamp=None,
+    )
+
     with conn:
         curs = conn.execute('DELETE FROM hashhunter WHERE cpaddr=?', [ops.TARGET_ADDR])
     return True

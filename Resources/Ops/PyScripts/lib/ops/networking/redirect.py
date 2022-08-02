@@ -21,7 +21,7 @@ def parse_redirect_args(arg_list=None, random=False):
     if random:
         group_listenLocation.add_argument('--lplisten', action='store', dest='lplisten', nargs='*', default=None, help='Listen for new connections on the LP-side (default bind=0.0.0.0).')
         group_listenLocation.add_argument('--implantlisten', action='store', dest='implantlisten', nargs='*', default=None, help='Listen for new connections on the Implant-side (default bind=0.0.0.0).')
-    elif (not random):
+    else:
         group_listenLocation.add_argument('--lplisten', action='store', dest='lplisten', nargs='+', default=None, help='Listen for new connections on the LP-side (default bind=0.0.0.0).')
         group_listenLocation.add_argument('--implantlisten', action='store', dest='implantlisten', nargs='+', default=None, help='Listen for new connections on the Implant-side (default bind=0.0.0.0).')
     parser.add_argument('--target', action='store', dest='target', required=True, nargs='*', help='The address / port to which data should be forwarded. NOTE: Data is always forwarded to the side opposite where the listening port is.')
@@ -38,10 +38,13 @@ def parse_redirect_args(arg_list=None, random=False):
         assert util.ip.validate(options.limitconnections[0]), 'addr in limitconnections must be a valid IP address'
         assert util.ip.validate(options.limitconnections[1]), 'mask in limitconnections must be a valid IP address'
     if random:
-        assert (len(options.target) in range(0, 5)), 'Target must be a list with 0-4 elements when using random.'
+        assert len(options.target) in range(
+            5
+        ), 'Target must be a list with 0-4 elements when using random.'
+
         for item in options.target:
             assert (util.ip.validate(item) or util.ip.validate_port(item)), 'Target items must be either a valid IP address or valid port when using random.'
-    elif (not random):
+    else:
         assert (len(options.target) in range(2, 5)), 'Target must be a list with 2-4 elements when not using random.'
         assert util.ip.validate(options.target[0]), 'addr in target must be a valid IP address'
         assert util.ip.validate_port(options.target[1]), 'destPort in target must be a valid IP address'
@@ -63,14 +66,10 @@ def generate_tunnel_cmd(arg_list=None, random=False):
     if random:
         if (len(listen_type) == 0):
             listen_type = [get_random_port()]
-            pass
         elif (len(listen_type) == 2):
             pass
         elif util.ip.validate(listen_type[0]):
             listen_type = [get_random_port(), listen_type[0]]
-            pass
-        else:
-            pass
     if (options.implantlisten is not None):
         redir_cmd.implantlisten = ' '.join(listen_type)
     else:
@@ -80,20 +79,16 @@ def generate_tunnel_cmd(arg_list=None, random=False):
     if random:
         if ((len(options.target) == 0) and (options.implantlisten is not None)):
             options.target = ['127.0.0.1', listen_type[0]]
-        elif (len(options.target) == 1):
+        elif len(options.target) == 1:
             if ((not util.ip.validate(options.target[0])) and (options.implantlisten is not None)):
                 options.target = ['127.0.0.1', options.target[0]]
             else:
                 options.target = [options.target[0], listen_type[0]]
-            pass
         elif util.ip.validate(options.target[1]):
             if (len(options.target) == 2):
                 options.target = [options.target[0], listen_type[0], options.target[1]]
             else:
                 options.target = [options.target[0], listen_type[0], options.target[1], options.target[2]]
-            pass
-        else:
-            pass
     redir_cmd.target = ' '.join(options.target)
     redir_cmd.optdict['connections'] = options.connections
     if (options.limitconnections is not None):
@@ -123,12 +118,9 @@ def stop_tunnel(id=None, dsz_cmd=None):
     tunnel_list = get_tunnel_list()
     for tunnel in tunnel_list:
         if (((id is not None) and (tunnel.id == id)) or ((dsz_cmd is not None) and convert_str(ops.cmd.getDszCommand(convert_str(tunnel.fullcommand))).endswith(convert_str(dsz_cmd)))):
-            stop_cmd = ops.cmd.getDszCommand(('stop %s' % tunnel.id))
+            stop_cmd = ops.cmd.getDszCommand(f'stop {tunnel.id}')
             stop_cmd.execute()
-            if (stop_cmd.success == 1):
-                return tunnel.id
-            else:
-                return False
+            return tunnel.id if (stop_cmd.success == 1) else False
     return True
 
 def get_tunnel_failure_information(id=None):
@@ -158,23 +150,25 @@ def get_tunnel_failure_information(id=None):
 def get_tunnel_list(remote=False):
     channels_cmd = ops.cmd.getDszCommand('commands', prefixes=['stopaliasing'], all=False, any=False, astyped=False, verbose=False, dszquiet=True, remote=remote)
     channels_data = channels_cmd.execute()
-    tunnel_list = []
-    for command_data in channels_data.command:
-        if (convert_str(command_data.name) == 'redirect'):
-            tunnel_list.append(command_data)
-    return tunnel_list
+    return [
+        command_data
+        for command_data in channels_data.command
+        if (convert_str(command_data.name) == 'redirect')
+    ]
 
 def verify_remote_tunnel(id=None, return_status=False):
     assert (type(id) is int), 'Given id must be an int.'
     tunnel_list = get_tunnel_list(remote=True)
     if (len(tunnel_list) == 0):
         return False
-    for tunnel in tunnel_list:
-        if (tunnel.id == id):
-            if return_status:
-                return True
-            return tunnel
-    return False
+    return next(
+        (
+            True if return_status else tunnel
+            for tunnel in tunnel_list
+            if (tunnel.id == id)
+        ),
+        False,
+    )
 
 def verify_local_tunnel(id=None, dsz_cmd=None, return_status=False):
     assert ((id is None) or (dsz_cmd is None)), 'You cannot specify both an id and a dsz_cmd.'
@@ -186,24 +180,18 @@ def verify_local_tunnel(id=None, dsz_cmd=None, return_status=False):
         return False
     for tunnel in tunnel_list:
         if (tunnel.id == id):
-            if return_status:
-                return True
-            return tunnel
+            return True if return_status else tunnel
         if convert_str(ops.cmd.getDszCommand(convert_str(tunnel.fullcommand))).endswith(convert_str(dsz_cmd)):
-            if return_status:
-                return True
-            return tunnel
+            return True if return_status else tunnel
     return False
 
 def convert_str(dsz_cmd):
     return str(dsz_cmd).lower().strip()
 
 def verify_dsz_cmd_redirect_object(dsz_cmd):
-    if (not (type(dsz_cmd) == type(ops.cmd.getDszCommand('redirect')))):
+    if type(dsz_cmd) != type(ops.cmd.getDszCommand('redirect')):
         return False
-    if (not (convert_str(dsz_cmd.plugin) == 'redirect')):
-        return False
-    return True
+    return convert_str(dsz_cmd.plugin) == 'redirect'
 
 def verify_tunnel(id=None, dsz_cmd=None, return_status=False):
     assert ((id is None) or (dsz_cmd is None)), 'You cannot specify both an id and a dsz_cmd.'
@@ -216,9 +204,7 @@ def verify_tunnel(id=None, dsz_cmd=None, return_status=False):
     remote_tunnel = verify_remote_tunnel(id=int(local_tunnel.id))
     if (remote_tunnel is False):
         return False
-    if return_status:
-        return True
-    return local_tunnel
+    return True if return_status else local_tunnel
 
 def get_random_port(os=None):
     if ((os is None) or (os.lower() in ['win', 'windows'])):

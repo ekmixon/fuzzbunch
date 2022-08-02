@@ -29,13 +29,16 @@ def localhashFile(path, mask, hashtype):
 def prepArgs(args):
     if (len(args) == 5):
         return (args[1], args[2], args[3], args[4])
-    elif (len(args) == 3):
+    elif len(args) == 3:
         temp = ['', '', '', '']
         (temp[0], temp[1]) = os.path.split(args[1])
         (temp[2], temp[3]) = os.path.split(args[2])
-        if ((len(temp[2]) == 0) or (len(temp[1]) == 0)):
-            return (args[1], args[2])
-        return temp
+        return (
+            (args[1], args[2])
+            if ((len(temp[2]) == 0) or (len(temp[1]) == 0))
+            else temp
+        )
+
     elif (len(args) == 2):
         return os.path.split(args[1])
     elif (len(args) == 1):
@@ -106,7 +109,7 @@ def printHashes(args, hashtype):
     remoteHashes = hashFile(args[0], args[1], hashtype)
     if (len(remoteHashes) > 0):
         for i in range(len(remoteHashes[0])):
-            print ('Remote:%s' % remoteHashes[1][i])
+            print(f'Remote:{remoteHashes[1][i]}')
             print ('%s: %s\n' % (hashtype.upper(), remoteHashes[0][i]))
 
 def genMasterList(args, filename, hashtype):
@@ -156,18 +159,23 @@ def parseArgs():
 if (__name__ == '__main__'):
     dsz.control.echo.Off()
     (options, args) = parseArgs()
-    if (not (options.userentry == None)):
+    if options.userentry is not None:
         printUserHash(options.userentry, options.hashtype)
-    if (not (options.localcompare == None)):
+    if options.localcompare is not None:
         newargs = (prepArgs(args) + prepArgs([options.localcompare]))
         compareLocalRemote(newargs, options.hashtype)
-    if (not (options.filecompare == None)):
+    if options.filecompare is not None:
         args = prepArgs(args)
         compareRemoteFile(args, options.filecompare, options.hashtype)
-    if (not (options.genfile == None)):
+    if options.genfile is not None:
         args = prepArgs(args)
         genMasterList(args, options.genfile, options.hashtype)
-    if ((options.genfile == None) and (options.userentry == None) and (options.localcompare == None) and (options.filecompare == None)):
+    if (
+        options.genfile is None
+        and options.userentry is None
+        and options.localcompare is None
+        and options.filecompare is None
+    ):
         args = prepArgs(args)
         printHashes(args, options.hashtype)
-    print '--Checksum Complete--'
+    dsz.control.echo.Off()

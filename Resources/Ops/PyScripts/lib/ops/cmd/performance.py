@@ -58,24 +58,20 @@ class PerformanceCommand(ops.cmd.DszCommand, ):
     def validateInput(self):
         if ((self.data is not None) and (self.objectNumber is not None)):
             return False
-        if ((self.data is None) and (self.objectNumber is None)):
-            return False
-        return True
+        return self.data is not None or self.objectNumber is not None
 
     def __str__(self):
-        cmdstr = u''
-        for prefix in self.prefixes:
-            cmdstr += ('%s ' % prefix)
-        cmdstr += (self.plugin + ' ')
+        cmdstr = u''.join(f'{prefix} ' for prefix in self.prefixes)
+        cmdstr += f'{self.plugin} '
         if self.initialBufferSize:
-            cmdstr += ('-initial %s ' % self.initalBufferSize)
+            cmdstr += f'-initial {self.initalBufferSize} '
         if self.objectNumber:
-            cmdstr += ('-objectnum %s ' % self.objectNumber)
+            cmdstr += f'-objectnum {self.objectNumber} '
         if self.data:
-            cmdstr += ('-data %s ' % self.data)
+            cmdstr += f'-data {self.data} '
         if self.bare:
             cmdstr += '-bare '
         if self.target:
-            cmdstr += ('-target %s ' % self.target)
+            cmdstr += f'-target {self.target} '
         return ops.utf8(cmdstr)
 ops.cmd.command_classes['performance'] = PerformanceCommand

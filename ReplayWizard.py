@@ -18,21 +18,21 @@ def main():
     first_run = True
     sentinel_children = []
     while True:
-        drive_menu = [('%s:' % x) for x in LETTERS if glob.glob(('%s:/DSZOpsDisk*' % x))]
+        drive_menu = [f'{x}:' for x in LETTERS if glob.glob(f'{x}:/DSZOpsDisk*')]
         if (first_run and (len(drive_menu) == 1)):
             choice = drive_menu[0]
-            print(('Only one share found, selecting %s drive...' % choice))
+            print(f'Only one share found, selecting {choice} drive...')
             first_run = False
         else:
             choice = menu(drive_menu, quitmsg='QUIT', text="Select the drive or share with the Windows OPS disk you'd like to use:")
         if (choice is None):
             for child in sentinel_children:
-                print(('Stopping sentinel process: %s' % child.pid))
+                print(f'Stopping sentinel process: {child.pid}')
                 child.terminate()
             break
         if (choice == REFRESH_LIST):
             continue
-        ops_disk_path = glob.glob(('%s/DSZOpsDisk*' % choice))[0]
+        ops_disk_path = glob.glob(f'{choice}/DSZOpsDisk*')[0]
         replay_disk_path = os.path.join(REPLAY_DRIVE, 'ReplayDisk')
         if (not os.path.exists(replay_disk_path)):
             create_replay_disk(ops_disk_path, replay_disk_path)
@@ -50,7 +50,13 @@ def create_replay_disk(ops_disk_path, replay_disk_path):
     print(('\nCopying replay from %s (may take a moment)...' % ops_disk_path))
     os.chdir(ops_disk_path)
     script_path = os.path.join(ops_disk_path, 'CreateReplay.py')
-    proc = subprocess.Popen(('python %s' % script_path), stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+    proc = subprocess.Popen(
+        f'python {script_path}',
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        stdin=subprocess.PIPE,
+    )
+
     proc.communicate(('%s\n' % replay_disk_path))
 
 def sentinel_prompts(ops_disk_path, output_dir):
@@ -65,17 +71,20 @@ def sentinel_prompts(ops_disk_path, output_dir):
     if ((not get_files) and (not host_map)):
         print()
         return
-    python_file = ('%s/Resources/Ops/PyScripts/Windows/sentinel/fsmon.py' % ops_disk_path)
+    python_file = (
+        f'{ops_disk_path}/Resources/Ops/PyScripts/Windows/sentinel/fsmon.py'
+    )
+
     if (not os.path.exists(python_file)):
         print("\nCouldn't find sentinel! Skipping...")
         return
-    command_line = ('python %s --fresh --output-dir %s' % (python_file, output_dir))
+    command_line = f'python {python_file} --fresh --output-dir {output_dir}'
     if get_files:
         command_line += ' --get-files'
     if host_map:
         command_line += ' --host-table'
     logs_path = os.path.join(os.path.dirname(ops_disk_path), 'Logs')
-    command_line += (' ' + logs_path)
+    command_line += f' {logs_path}'
     print(('\n\nRunning: %s\n' % command_line))
     return subprocess.Popen(command_line)
 
@@ -86,7 +95,7 @@ def project_menu(ops_disk_path, replay_disk_path):
         projects = [path for path in os.listdir(logs_path) if os.path.isdir(os.path.join(logs_path, path))]
         if (first_run and (len(projects) == 1)):
             choice = projects[0]
-            print(('Only one project found, auto-selecting %s...' % choice))
+            print(f'Only one project found, auto-selecting {choice}...')
             first_run = False
         else:
             choice = menu(projects, quitmsg='BACK TO SHARES LIST', text='Select a project to open the DSZ GUI:')
@@ -98,9 +107,13 @@ def project_menu(ops_disk_path, replay_disk_path):
         write_user_defaults_file(replay_disk_path, normpath(project_log_dir))
         print(("\nLaunching GUI for '%s'... " % choice), end='')
         script_path = os.path.join(replay_disk_path, 'start_lp.py')
-        subprocess.Popen(('python %s' % script_path))
+        subprocess.Popen(f'python {script_path}')
         print('done.\n')
-        print(('Sleeping for %s seconds, then you can select another project... ' % SLEEP), end='')
+        print(
+            f'Sleeping for {SLEEP} seconds, then you can select another project... ',
+            end='',
+        )
+
         time.sleep(SLEEP)
         print('done.\n\n')
 
@@ -134,29 +147,23 @@ def menu(menu_list, text=None, quitmsg=None):
         if text:
             print(('\n' + text))
         if quitmsg:
-            print(((('%' + str(optspace)) + 'd. %s') % (0, quitmsg)))
+            print(f'%{optspace}d. %s' % (0, quitmsg))
         else:
             print('0. Quit')
-        items = 0
-        for i in menu_list:
-            items += 1
-            print(((('%' + str(optspace)) + 'd. %s') % (items, i)))
+        for items, i in enumerate(menu_list, start=1):
+            print(f'%{optspace}d. %s' % (items, i))
         result = None
         while ((result is None) or (result > len(menu_list)) or (result < 0)):
             result = prompt('Enter selection: ')
             try:
                 result = int(result)
-            except ValueError:
+            except (ValueError, TypeError):
                 result = None
-            except TypeError:
-                result = None
-        if (result == 0):
-            return None
-        return menu_list[(result - 1)]
+        return None if (result == 0) else menu_list[(result - 1)]
 
 def prompt(text, default=None):
     if default:
-        text += (' [%s] ' % default)
+        text += f' [{default}] '
     result = raw_input(text)
     if (result == ''):
         return (None if (default is None) else str(default))

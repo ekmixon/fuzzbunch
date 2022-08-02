@@ -11,16 +11,16 @@ import dsz
 import dsz.lp
 from ops.pprint import pprint
 DSZ_NS = '{urn:mca:db00db84-8b5b-2141-a632b5980175d3c6}'
-DATALOG_TAG = ('%sDataLog' % DSZ_NS)
-COMMANDDATA_TAG = ('%sCommandData' % DSZ_NS)
-SQL_TAG = ('%sSql' % DSZ_NS)
-QUERY_TAG = ('%sQuery' % DSZ_NS)
-COLUMNINFO_TAG = ('%sColumnInfo' % DSZ_NS)
-COLUMN_TAG = ('%sColumn' % DSZ_NS)
-NAME_TAG = ('%sName' % DSZ_NS)
-UNCOMPRESSEDDATA_TAG = ('%sUncompressedData' % DSZ_NS)
-TABLEROW_TAG = ('%sTableRow' % DSZ_NS)
-TABLEDATA_TAG = ('%sTableData' % DSZ_NS)
+DATALOG_TAG = f'{DSZ_NS}DataLog'
+COMMANDDATA_TAG = f'{DSZ_NS}CommandData'
+SQL_TAG = f'{DSZ_NS}Sql'
+QUERY_TAG = f'{DSZ_NS}Query'
+COLUMNINFO_TAG = f'{DSZ_NS}ColumnInfo'
+COLUMN_TAG = f'{DSZ_NS}Column'
+NAME_TAG = f'{DSZ_NS}Name'
+UNCOMPRESSEDDATA_TAG = f'{DSZ_NS}UncompressedData'
+TABLEROW_TAG = f'{DSZ_NS}TableRow'
+TABLEDATA_TAG = f'{DSZ_NS}TableData'
 
 def main(args):
     (opts, args) = parse_args(args)
@@ -63,9 +63,8 @@ def save_blob_from_file(command_id, output_path, column_name=None, column_index=
         blob = all_rows[row][column_index]
     if (not os.path.exists(os.path.dirname(output_path))):
         os.makedirs(os.path.dirname(output_path))
-    oh = open(output_path, 'wb')
-    oh.write(blob.decode('hex'))
-    oh.close()
+    with open(output_path, 'wb') as oh:
+        oh.write(blob.decode('hex'))
     return output_path
 
 def parse_args(arguments):
@@ -93,7 +92,7 @@ def format_id(command_id):
 
 def data_from_id(command_id):
     command_id = format_id(command_id)
-    mask = ('%s-sql*' % command_id)
+    mask = f'{command_id}-sql*'
     pattern = os.path.join(dsz.lp.GetLogsDirectory(), 'Data', mask)
     files = glob.glob(pattern)
     if (not files):
@@ -112,7 +111,7 @@ def data_from_id(command_id):
 
 def header_from_id(command_id):
     command_id = format_id(command_id)
-    mask = ('%s-sql*' % command_id)
+    mask = f'{command_id}-sql*'
     pattern = os.path.join(dsz.lp.GetLogsDirectory(), 'Data', mask)
     files = glob.glob(pattern)
     if (not files):

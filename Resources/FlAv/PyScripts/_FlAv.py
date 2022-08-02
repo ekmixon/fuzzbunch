@@ -121,7 +121,7 @@ def main():
 #------------------------------------------------------------------------------------------
 def InstallTools(params, ask=None):
 	bAsk = ask
-	if bAsk == None:
+	if bAsk is None:
 		bAsk = not params[Quiet]
 	if (IsKiSuEnabled(params)):
 		return demi.windows.driver.Install(params[Project],
@@ -144,7 +144,7 @@ def InstallTools(params, ask=None):
 #------------------------------------------------------------------------------------------
 def UninstallTools(params, ask=None):
 	bAsk = ask
-	if bAsk == None:
+	if bAsk is None:
 		bAsk = not params[Quiet]
 	if (IsKiSuEnabled(params)):
 #		return demi.windows.driver.Uninstall(params[Project],
@@ -162,31 +162,29 @@ def UninstallTools(params, ask=None):
 											
 #--------------------------------------------------------------------------
 def uninstallFromKisu(project, driverName, moduleId, ask=True):
-	
+
 	# record current flags and turn echo'ing off / disablewow64
 	x = dsz.control.Method()
 	dsz.control.echo.Off()
-	rtn = True
-
 	if (len(driverName) == 0):
 		dsz.ui.Echo("Invalid driver name given", dsz.ERROR)
 		return False
 
-	# if not demi.windows.driver.CheckIsRunning():
-		# return False
 	if not demi.windows.driver.VerifyInstall(driverName,
 											 moduleId,
 											 2,
 											 1):
 		return False
 
-	if (ask and (not dsz.ui.Prompt("Do you want to uninstall the %s driver (%s.sys)?" % (project, driverName)))):
+	if ask and not dsz.ui.Prompt(
+		f"Do you want to uninstall the {project} driver ({driverName}.sys)?"
+	):
 		return False
-		
-	dsz.ui.Echo("Removing module from KiSu store")	
+
+	dsz.ui.Echo("Removing module from KiSu store")
 	if dsz.cmd.Run("kisu_deletemodule -id %d" % (moduleId)):
 		dsz.ui.Echo("    SUCCESS", dsz.GOOD)
-		return rtn
+		return True
 	else:
 		dsz.ui.Echo("    FAILED", dsz.ERROR)
 		return False
@@ -195,17 +193,15 @@ def uninstallFromKisu(project, driverName, moduleId, ask=True):
 #------------------------------------------------------------------------------------------
 def UpgradeTools(params, ask=None):
 	bAsk = ask
-	if bAsk == None:
+	if bAsk is None:
 		bAsk = not params[Quiet]
 	if (IsKiSuEnabled(params)):
-		return demi.windows.driver.ReplaceDriver(params[Project] + "Test",
-												 params[DriverName],
-												 params[ModuleId],
-												 bAsk)
+		return demi.windows.driver.ReplaceDriver(
+			f"{params[Project]}Test", params[DriverName], params[ModuleId], bAsk
+		)
+
 	else:
-		return DszReplaceDriver(params[Project] + "Test",
-								params[DriverName],
-								bAsk)
+		return DszReplaceDriver(f"{params[Project]}Test", params[DriverName], bAsk)
 		
 #------------------------------------------------------------------------------------------
 def LoadDriver(params):
@@ -239,22 +235,18 @@ def VerifyInstall(params):
 #------------------------------------------------------------------------------------------
 def VerifyRunning(params):
 	dsz.control.echo.Off()
-	if (IsKiSuEnabled(params)):
-		demi.windows.driver.VerifyRunning(params[DriverName],
-										  params[ModuleId])
-		# DEMI does not support this method, though it's invoked anyway
-		dsz.ui.Echo("Checking for presence of FLAV via control plugin")
-		if (dsz.cmd.Run('flav_control -status')):
-			dsz.ui.Echo("    SUCCESS", dsz.GOOD)
-			return True
-		else:
-			dsz.ui.Echo("    FAILURE", dsz.ERROR)
-			return False
-			
-		#return demi.windows.driver.VerifyRunning(params[DriverName],
-		#										 params[ModuleId])
-	else:
+	if not (IsKiSuEnabled(params)):
 		return dsz.windows.driver.VerifyRunning(params[DriverName])
+	demi.windows.driver.VerifyRunning(params[DriverName],
+									  params[ModuleId])
+	# DEMI does not support this method, though it's invoked anyway
+	dsz.ui.Echo("Checking for presence of FLAV via control plugin")
+	if (dsz.cmd.Run('flav_control -status')):
+		dsz.ui.Echo("    SUCCESS", dsz.GOOD)
+		return True
+	else:
+		dsz.ui.Echo("    FAILURE", dsz.ERROR)
+		return False
 
 #------------------------------------------------------------------------------------------
 def CheckDriverStatus(params):
@@ -272,7 +264,7 @@ def CheckDriverStatus(params):
 			avail = dsz.cmd.data.Get("status::available", dsz.TYPE_BOOL)[0]
 
 			dsz.ui.Echo("    Driver Version : %d.%d.%d.%d" % (major, minor, fix, build))
-			dsz.ui.Echo("         Available : %s" % ("true" if avail else "false"))
+			dsz.ui.Echo(f'         Available : {"true" if avail else "false"}')
 		except:
 			dsz.ui.Echo("\n**** UNABLE TO GET DRIVER STATUS****", dsz.ERROR)
 			bSuccess = False
@@ -288,25 +280,22 @@ def CheckDriverStatus(params):
 			dsz.ui.Echo("\n**** UNABLE TO GET DRIVER IPCONFIG ****", dsz.ERROR)
 			bSuccess = False
 
-	if not bSuccess and params[Quiet]:
-		return False
-	return True
+	return bSuccess or not params[Quiet]
 
 #------------------------------------------------------------------------------------------
 def GetProjectVersion(params):
 	try:
 		resDir = dsz.lp.GetResourcesDirectory()
-		xmlFile = "%s/FlAv/Version/FlAv_Version.xml" % (resDir)
+		xmlFile = f"{resDir}/FlAv/Version/FlAv_Version.xml"
 		doc = xml.dom.minidom.parse(xmlFile)
 		verNode = doc.getElementsByTagName("Version").item(0)
 		verStr = ""
 		for n in verNode.childNodes:
 			if n.nodeType == xml.dom.Node.TEXT_NODE:
-				verStr = "%s%s" % (verStr, n.data)
-		return verStr		
+				verStr = f"{verStr}{n.data}"
+		return verStr
 	except:
 		raise
-		return "FlAv 0.0.0.0"
 
 #------------------------------------------------------------------------------------------
 def IsKiSuEnabled(params):
@@ -319,9 +308,7 @@ def IsKiSuEnabled(params):
 				# abort -now-.  We don't want to do the standard action.
 				sys.exit(-1)
 			return True
-	if bNoDemi:
-		return False
-	return demi.UseKiSu()
+	return False if bNoDemi else demi.UseKiSu()
 
 #------------------------------------------------------------------------------------------
 def DszReplaceDriver(project, drvName, ask=True):
@@ -329,7 +316,7 @@ def DszReplaceDriver(project, drvName, ask=True):
 	dsz.control.echo.Off()
 	systemRoot = dsz.path.windows.GetSystemPath()
 
-	tmpName = "%s32.sys" % (drvName)
+	tmpName = f"{drvName}32.sys"
 
 	# first, move existing driver
 	dsz.ui.Echo("Move existing driver")
@@ -352,13 +339,13 @@ def DszReplaceDriver(project, drvName, ask=True):
 	else:
 		matchFile = "%s\\user.exe" % (systemRoot)
 
-	dsz.ui.Echo("Matching file times for %s.sys with %s" % (drvName, matchFile))
+	dsz.ui.Echo(f"Matching file times for {drvName}.sys with {matchFile}")
 	if dsz.cmd.Run('matchfiletimes -src "%s" -dst "%s\\drivers\\%s.sys"' %(matchFile, systemRoot, drvName)):
 		dsz.ui.Echo("    MATCHED", dsz.GOOD)
 	else:
 		dsz.ui.Echo("    FAILED", dsz.WARNING)
-		
-	dsz.ui.Echo("Matching file times for %s with %s" % (tmpName, matchFile))
+
+	dsz.ui.Echo(f"Matching file times for {tmpName} with {matchFile}")
 	if dsz.cmd.Run('matchfiletimes -src "%s" -dst "%s\\drivers\\%s"' %(matchFile, systemRoot, tmpName)):
 		dsz.ui.Echo("    MATCHED", dsz.GOOD)
 	else:
@@ -376,6 +363,5 @@ def DszReplaceDriver(project, drvName, ask=True):
 
 
 #------------------------------------------------------------------------------------------
-if __name__ == '__main__':
-	if (main() != True):
-		sys.exit(-1);
+if __name__ == '__main__' and (main() != True):
+	sys.exit(-1);

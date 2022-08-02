@@ -14,7 +14,7 @@ def main():
     problemText = ' '.join(sys.argv[2:])
     dszLogger = DSZPyLogger()
     toolLog = dszLogger.getLogger(toolName)
-    toolLog.log(21, ((idnum + ':') + problemText))
+    toolLog.log(21, f'{idnum}:{problemText}')
     ops.info('Your problem has been logged and will be reported when you are done')
 if (__name__ == '__main__'):
     main()

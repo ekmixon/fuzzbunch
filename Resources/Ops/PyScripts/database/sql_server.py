@@ -208,10 +208,7 @@ def safe_reg_value(hive, path, key, verbose=True, wow32=False):
 
 def identify_working_instance(wow32=False):
     instances = safe_reg_value('L', 'SOFTWARE\\Microsoft\\Microsoft SQL Server', 'InstalledInstances', wow32=wow32)
-    if (not instances):
-        return []
-    instance_list = [entry for entry in instances]
-    return instance_list
+    return list(instances) if instances else []
 
 def choose_instance(instance_list):
     instance_menu = ops.menu.Menu()
@@ -227,35 +224,40 @@ def choose_instance(instance_list):
 
 def get_current_version(working_instance, wow32):
     path = (('SOFTWARE\\Microsoft\\Microsoft SQL Server\\' + working_instance) + '\\MSSQLServer\\CurrentVersion')
-    current_version = safe_reg_value('L', path, 'CurrentVersion', False, wow32=wow32)
-    if current_version:
+    if current_version := safe_reg_value(
+        'L', path, 'CurrentVersion', False, wow32=wow32
+    ):
         return current_version[0]
     path = (('SOFTWARE\\Microsoft\\MSSQLServer\\' + working_instance) + '\\CurrentVersion')
-    current_version = safe_reg_value('L', path, 'CurrentVersion', False, wow32=wow32)
-    if current_version:
+    if current_version := safe_reg_value(
+        'L', path, 'CurrentVersion', False, wow32=wow32
+    ):
         return current_version[0]
     return None
 
 def get_instance_registry_location(working_instance, ver8, wow32):
-    if (ver8 and (working_instance == 'MSSQLSERVER')):
-        return 'SOFTWARE\\Microsoft\\MSSQLServer\\'
-    elif ver8:
-        return ('SOFTWARE\\Microsoft\\Microsoft SQL Server\\' + working_instance)
+    if ver8:
+        if working_instance == 'MSSQLSERVER':
+            return 'SOFTWARE\\Microsoft\\MSSQLServer\\'
+        else:
+            return ('SOFTWARE\\Microsoft\\Microsoft SQL Server\\' + working_instance)
     path = 'SOFTWARE\\Microsoft\\Microsoft SQL Server\\Instance Names\\SQL'
     instance_id = safe_reg_value('L', path, working_instance, wow32=wow32)
-    if (not instance_id):
-        return None
-    return ('SOFTWARE\\Microsoft\\Microsoft SQL Server\\' + instance_id[0])
+    return (
+        ('SOFTWARE\\Microsoft\\Microsoft SQL Server\\' + instance_id[0])
+        if instance_id
+        else None
+    )
 
 def get_full_version_string(current_version, instance_reg_loc, ver8, wow32):
     if ver8:
-        return (current_version + ' - SQL Server 2000 ')
+        return f'{current_version} - SQL Server 2000 '
     edition_path = (instance_reg_loc + '\\Setup')
     edition = safe_reg_value('L', edition_path, 'Edition', wow32=wow32)
     if current_version.startswith('10.0'):
-        return ((current_version + ' - SQL Server 2008 ') + edition[0])
+        return f'{current_version} - SQL Server 2008 {edition[0]}'
     elif current_version.startswith('9.00'):
-        return ((current_version + ' - SQL Server 2005 ') + edition[0])
+        return f'{current_version} - SQL Server 2005 {edition[0]}'
     else:
         return 'Unknown SQL Server Version'
 
@@ -264,22 +266,21 @@ def get_audit_level(instance_reg_loc, wow32):
     audit_level = safe_reg_value('L', audit_path, 'AuditLevel', wow32=wow32)
     audit_level = int(audit_level[0])
     audit_map = {0: 'no auditing', 1: 'successful logins', 2: 'failed logins', 3: 'successful and failed logins'}
-    return ('%s - %s' % (audit_level, audit_map[audit_level]))
+    return f'{audit_level} - {audit_map[audit_level]}'
 
 def get_login_mode(instance_reg_loc, wow32):
     login_mode_path = (instance_reg_loc + '\\MSSQLServer')
     login_mode = safe_reg_value('L', login_mode_path, 'LoginMode', wow32=wow32)
     login_mode = int(login_mode[0])
     login_map = {0: 'mixed mode', 1: 'integrated mode', 2: 'mixed mode'}
-    return ('%s - %s' % (login_mode, login_map[login_mode]))
+    return f'{login_mode} - {login_map[login_mode]}'
 
 def get_sql_program_dir(instance_reg_loc, wow32):
     prog_dir_path = (instance_reg_loc + '\\Setup')
     prog_dir = safe_reg_value('L', prog_dir_path, 'SqlProgramDir', wow32=wow32)
     if (prog_dir is None):
         prog_dir = safe_reg_value('L', prog_dir_path, 'SQLPath', wow32=wow32)
-    root_sql_dir = prog_dir[0][0:prog_dir[0].rfind('\\')]
-    return root_sql_dir
+    return prog_dir[0][:prog_dir[0].rfind('\\')]
 
 def get_named_pipe(instance_reg_loc, wow32):
     np_path = ('%s\\MSSQLServer\\SuperSocketNetLib\\Np' % instance_reg_loc)
@@ -288,12 +289,14 @@ def get_named_pipe(instance_reg_loc, wow32):
 
 def get_tcp_port(instance_reg_loc, wow32):
     tcp_key = ('%s\\MSSQLServer\\SuperSocketNetLib\\Tcp\\IPALL' % instance_reg_loc)
-    port = safe_reg_value('L', tcp_key, 'TcpPort', verbose=False, wow32=wow32)
-    if port:
+    if port := safe_reg_value(
+        'L', tcp_key, 'TcpPort', verbose=False, wow32=wow32
+    ):
         return port[0]
     tcp_key = ('%s\\MSSQLServer\\SuperSocketNetLib\\Tcp' % instance_reg_loc)
-    port = safe_reg_value('L', tcp_key, 'TcpPort', verbose=False, wow32=wow32)
-    if port:
+    if port := safe_reg_value(
+        'L', tcp_key, 'TcpPort', verbose=False, wow32=wow32
+    ):
         return port[0]
     return None
 
@@ -362,14 +365,14 @@ def select_database_menu(available_databases, menu):
 def get_database_file_list():
     dsz.control.echo.Off()
     dsz.ui.Echo("Would you like to run a full dir for *.mdf files? The connection string wizard uses this to find all available database names. \n\nIf you say no, you will have to type the database name by hand. \n\nIf you've run this already in the last day, you should say YES because the script will read the file list from the previously cached values.", dsz.GOOD)
-    print ''
+    dsz.control.echo.Off()
     should_dir = dsz.ui.Prompt('Run: dir -path * -mask *.mdf -recursive?')
     if (should_dir == False):
         dsz.control.echo.On()
         return []
     path = '*'
     mask = '*.mdf'
-    cache_tag = ('%s//%s' % (path, mask))
+    cache_tag = f'{path}//{mask}'
     try:
         dir_list = get_dirlisting(path, mask=mask, recursive=True, cache_tag=cache_tag, maxage=timedelta(days=1))
     except ops.cmd.OpsCommandException as e:

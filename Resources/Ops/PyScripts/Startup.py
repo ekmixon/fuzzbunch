@@ -16,7 +16,10 @@ def wrappers():
     with open(os.path.join(dsz.lp.GetResourcesDirectory(), 'Ops', 'Data', 'wrappers.json'), 'r') as input:
         wrappers = json.load(input)
     for wrapper in wrappers:
-        dsz.cmd.Run(('wrappers -register %s -script %s -location all %s -project %s' % (wrapper['command'], wrapper['script'], ('-pre' if (('hook' not in wrapper.keys()) or (wrapper['hook'] == 'pre')) else '-post'), ('Ops' if ('project' not in wrapper.keys()) else wrapper['project']))))
+        dsz.cmd.Run(
+            f"wrappers -register {wrapper['command']} -script {wrapper['script']} -location all {'-pre' if (('hook' not in wrapper.keys()) or (wrapper['hook'] == 'pre')) else '-post'} -project {'Ops' if 'project' not in wrapper.keys() else wrapper['project']}"
+        )
+
         dsz.ui.Echo((wrapper['command'] if ('reason' not in wrapper.keys()) else ' - '.join([wrapper['command'], wrapper['reason']])))
     dsz.ui.Echo(('-' * 50))
     return True
@@ -67,7 +70,7 @@ def detect_project_name():
         dsz.lp.alias.DisableCommand('pc_connect')
         print()
         print('Correct format: D:\\Logs\\<PROJECTNAME>')
-        print(('You provided  : %s' % projectdir))
+        print(f'You provided  : {projectdir}')
         print()
         print('YOU MUST RECONFIGURE YOUR SESSION TO CONTINUE.')
         print('CLEAN ANY EXTRANEOUS DATA CREATED BY THIS CONFIGURATION FROM THE LOGS DIRECTORY.')
@@ -81,9 +84,13 @@ def disk_info():
     projectdir = os.path.split(logdir)[0]
     infofile = os.path.join(projectdir, 'disk-version.txt')
     if os.path.exists(infofile):
-        dsz.ui.Echo(('Disk version already logged; if you switched disks for some reason, rename %s and restart the LP please.' % infofile), dsz.GOOD)
+        dsz.ui.Echo(
+            f'Disk version already logged; if you switched disks for some reason, rename {infofile} and restart the LP please.',
+            dsz.GOOD,
+        )
+
         return True
-    opsdisk_root = os.path.normpath((dsz.lp.GetResourcesDirectory() + '/..'))
+    opsdisk_root = os.path.normpath(f'{dsz.lp.GetResourcesDirectory()}/..')
     dszfiles = util.listdir(opsdisk_root, '^DSZOpsDisk-.+\\.zip$')
     disk = None
     if (len(dszfiles) == 1):
@@ -101,7 +108,7 @@ def disk_info():
         return False
     with open(infofile, 'w') as output:
         output.write(('%s\n' % disk))
-    dsz.ui.Echo(('Disk version %s recorded to %s.' % (disk, infofile)), dsz.GOOD)
+    dsz.ui.Echo(f'Disk version {disk} recorded to {infofile}.', dsz.GOOD)
     return True
 
 def bgprecompile():
@@ -126,7 +133,7 @@ def setwindowtitle():
         minor = v.get('minor')
         fix = v.get('fix')
         build = v.get('build')
-        dszver = ('%s.%s.%s.%s' % (major, minor, fix, build))
+        dszver = f'{major}.{minor}.{fix}.{build}'
     else:
         dszver = '<unknown>'
     if dsz.env.Check('OPS_PROJECTNAME'):

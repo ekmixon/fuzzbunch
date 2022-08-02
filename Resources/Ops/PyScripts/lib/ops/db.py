@@ -25,10 +25,10 @@ try:
     TARGET_DB = find_target_db_filename()
 except:
     TARGET_DB = ''
-PROJECT_DB = os.path.normpath(('%s/../project.db' % ops.LOGDIR))
-VOLATILE_DB = os.path.normpath(('%s/../volatile.db' % ops.LOGDIR))
-ELIST = os.path.normpath(('%s/Ops/Databases/SimpleProcesses.db' % ops.RESDIR))
-DRIVERLIST = os.path.normpath(('%s/Ops/Databases/DriverList.db' % ops.RESDIR))
+PROJECT_DB = os.path.normpath(f'{ops.LOGDIR}/../project.db')
+VOLATILE_DB = os.path.normpath(f'{ops.LOGDIR}/../volatile.db')
+ELIST = os.path.normpath(f'{ops.RESDIR}/Ops/Databases/SimpleProcesses.db')
+DRIVERLIST = os.path.normpath(f'{ops.RESDIR}/Ops/Databases/DriverList.db')
 
 class Database:
 
@@ -84,22 +84,18 @@ class Database:
         if (target_id is None):
             target_id = ops.project.getTargetID()
         self.ensureTable('command', 'CREATE TABLE command (cache_ID INTEGER PRIMARY KEY, instance_guid, target_id, id, name, timestamp, xmllog, screenlog, parentid, taskid, destination, source, isrunning, status, bytessent, bytesreceived, fullcommand, prefix, argument, children, data, tag)')
-        retval = []
         curs = self.connection.execute('SELECT cache_id FROM command WHERE tag = ? AND target_id = ?', (tag, target_id))
-        for row in curs:
-            retval.append(row['cache_id'])
-        return retval
+        return [row['cache_id'] for row in curs]
 
     def load_ops_object_byid(self, cache_id):
         self.ensureTable('command', 'CREATE TABLE command (cache_ID INTEGER PRIMARY KEY, instance_guid, target_id, id, name, timestamp, xmllog, screenlog, parentid, taskid, destination, source, isrunning, status, bytessent, bytesreceived, fullcommand, prefix, argument, children, data, tag)')
         curs = self.connection.execute('SELECT data, timestamp FROM command WHERE cache_id = ?', (cache_id,))
         row = curs.fetchone()
-        if (row is not None):
-            retval = pickle.loads(str(row['data']))
-            retval.__dict__['cache_timestamp'] = datetime.datetime.fromtimestamp(row['timestamp'])
-            return retval
-        else:
+        if row is None:
             raise Exception('Could not find cached object of that ID')
+        retval = pickle.loads(str(row['data']))
+        retval.__dict__['cache_timestamp'] = datetime.datetime.fromtimestamp(row['timestamp'])
+        return retval
 
     def load_ops_object_bytag(self, tag, targetID=None):
         self.ensureTable('command', 'CREATE TABLE command (cache_ID INTEGER PRIMARY KEY, instance_guid, target_id, id, name, timestamp, xmllog, screenlog, parentid, taskid, destination, source, isrunning, status, bytessent, bytesreceived, fullcommand, prefix, argument, children, data, tag)')
@@ -117,10 +113,7 @@ class Database:
         if (target_id is None):
             target_id = str(ops.project.getTargetID())
         curs = self.connection.execute("SELECT tag FROM command WHERE tag <> '' GROUP BY tag")
-        retval = []
-        for row in curs:
-            retval.append(row['tag'])
-        return retval
+        return [row['tag'] for row in curs]
 
     def delete_ops_object_byid(self, cache_id):
         self.ensureTable('command', 'CREATE TABLE command (cache_ID INTEGER PRIMARY KEY, instance_guid, target_id, id, name, timestamp, xmllog, screenlog, parentid, taskid, destination, source, isrunning, status, bytessent, bytesreceived, fullcommand, prefix, argument, children, data, tag)')
@@ -137,25 +130,40 @@ class Database:
             target_id = str(ops.project.getTargetID())
         self.ensureTable('command', 'CREATE TABLE command (cache_ID INTEGER PRIMARY KEY, instance_guid, target_id, id, name, timestamp, xmllog, screenlog, parentid, taskid, destination, source, isrunning, status, bytessent, bytesreceived, fullcommand, prefix, argument, children, data, tag)')
         ids = self.get_cache_ids_by_tag(tag=tag, target_id=target_id)
-        for cache_id in ids[0:(len(ids) - maxsize)]:
+        for cache_id in ids[:len(ids) - maxsize]:
             self.delete_ops_object_byid(cache_id)
 
     def _prep_metadata_for_save(self, opsobj):
-        datadict = dict()
-        for key in ['id', 'name', 'screenlog', 'parentid', 'taskid', 'destination', 'source', 'isrunning', 'status', 'bytessent', 'bytesreceived', 'fullcommand']:
-            datadict[key] = opsobj.commandmetadata.__dict__[key]
+        datadict = {
+            key: opsobj.commandmetadata.__dict__[key]
+            for key in [
+                'id',
+                'name',
+                'screenlog',
+                'parentid',
+                'taskid',
+                'destination',
+                'source',
+                'isrunning',
+                'status',
+                'bytessent',
+                'bytesreceived',
+                'fullcommand',
+            ]
+        }
+
         for listkey in ['xmllog', 'prefix', 'argument']:
             thislist = opsobj.commandmetadata.__dict__[listkey]
             datadict[listkey] = ''
             if ((thislist is not None) and (len(thislist) > 0)):
                 datadict[listkey] = thislist[0]
                 for item in thislist[1:]:
-                    thislist += (',' + item)
+                    thislist += f',{item}'
         datadict['children'] = ''
         if (len(opsobj.commandmetadata.child) > 0):
             datadict['children'] = str(opsobj.commandmetadata.child[0].id)
             for child in opsobj.commandmetadata.child[1:]:
-                datadict['children'] += (',' + str(child.id))
+                datadict['children'] += f',{str(child.id)}'
         datadict['instance_guid'] = ops.db.getInstanceNum()
         datadict['timestamp'] = time.time()
         datadict['target_id'] = ops.project.getTargetID(datadict['destination'])
@@ -167,9 +175,8 @@ class Database:
         return self.connection
 
     def __exit__(self, exc_type, exc_value, traceback):
-        if self.connection:
-            if self.autocommit:
-                self.connection.commit()
+        if self.connection and self.autocommit:
+            self.connection.commit()
         if self.autoclose:
             self.close()
         if (not self.nomutex):
@@ -179,16 +186,13 @@ def get_tdb(targetID=None):
     return find_target_db(targetID)
 
 def get_voldb():
-    retval = open_or_create_voldb()
-    return retval
+    return open_or_create_voldb()
 
 def get_pdb(proj_name=None):
-    retval = ops.project.get_pdb(proj_name)
-    return retval
+    return ops.project.get_pdb(proj_name)
 
 def get_this_db(this_db):
-    retval = open_or_create_db(this_db)
-    return retval
+    return open_or_create_db(this_db)
 
 def find_target_db(targetID=None, project=None):
     tdbfilename = find_target_db_filename(targetID, project)
@@ -264,8 +268,7 @@ def open_or_create_voldb():
 
 def getInstanceNum():
     instnum = ops.env.get('_OP_GUID')
-    if (instnum is not None):
+    if instnum is not None:
         return instnum
-    else:
-        voldb = ops.db.open_or_create_voldb()
-        return ops.env.get('_OP_GUID')
+    voldb = ops.db.open_or_create_voldb()
+    return ops.env.get('_OP_GUID')

@@ -8,7 +8,7 @@ def zip_file(infilename, outfilename=''):
     if (infilename == outfilename):
         raise Exception('You have tried to zip something into itself, that is a problem, quitting...')
     if (outfilename == ''):
-        outfilename = (infilename + '.zip')
+        outfilename = f'{infilename}.zip'
     outzip = zipfile.ZipFile(outfilename, 'w', zipfile.ZIP_DEFLATED)
     outzip.write(infilename, os.path.split(infilename)[1])
     outzip.close()
@@ -67,14 +67,14 @@ def main(infilename, outdir='', outfilebasename='', destfolder='fast', outfilena
     if (outfilename == ''):
         now = time.gmtime()
         outfilename = ('%s-W-%s-%d%s%s-%s%s.zip' % (outfilebasename, str(getSuite()), now.tm_year, str(now.tm_mon).ljust(2, '0'), str(now.tm_mday).ljust(2, '0'), str(now.tm_hour).ljust(2, '0'), str(now.tm_min).ljust(2, '0')))
-    print ('Making %s' % ((outdir + os.sep) + outfilename))
+    print(f'Making {outdir + os.sep + outfilename}')
     if os.path.isdir(infilename):
         zippath(infilename, ((outdir + os.sep) + outfilename))
     elif os.path.isfile(infilename):
         zip_file(infilename, ((outdir + os.sep) + outfilename))
     else:
         raise Exception('The given path does not exist')
-    print ('Sending %s to %s' % (((outdir + os.sep) + outfilename), destfolder))
+    print(f'Sending {outdir + os.sep + outfilename} to {destfolder}')
     ftpfile(((outdir + os.sep) + outfilename), destfolder)
 if (__name__ == '__main__'):
     i = 1
